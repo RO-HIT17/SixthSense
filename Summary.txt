@@ -1,0 +1,13 @@
+Sixth Sense
+Phase 1:
+Features:
+- Real Time Navigation by detecting objects and providing instructions (Core)
+
+Phase 2:
+- Describe specific image , face recognition , text recognition
+- Describe Whats Happening Around
+
+Phase 3:
+- Assistant Features - Texting,Calling
+- Voice Command (Conversational) based Navigation
+- Integrating Third Party APIs
