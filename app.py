@@ -1,117 +1,130 @@
 import cv2
 import numpy as np
-import pyttsx3
-
 import time
-
+# Load YOLO Model
 yolo_net = cv2.dnn.readNet("yolov3.weights", "yolov3.cfg")
 layer_names = yolo_net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
 
-with open("coco.names", "r") as f:
-    classes = [line.strip() for line in f.readlines()]
+# Define classes and real-world widths (in cm)
+classes = [
+    "person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
+    "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", 
+    "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", 
+    "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball",
+    "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", 
+    "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", 
+    "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
+    "sofa", "pottedplant", "bed", "diningtable", "toilet", "tvmonitor", "laptop", "mouse", 
+    "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
+    "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
+]
 
+KNOWN_WIDTHS = {
+    "person": 40, "bicycle": 65, "car": 150, "motorbike": 70, "aeroplane": 500, "bus": 250, 
+    "train": 300, "truck": 250, "boat": 200, "traffic light": 30, "fire hydrant": 50, 
+    "stop sign": 60, "parking meter": 20, "bench": 120, "bird": 20, "cat": 30, "dog": 50, 
+    "horse": 90, "sheep": 80, "cow": 150, "elephant": 300, "bear": 200, "zebra": 160, 
+    "giraffe": 200, "backpack": 40, "umbrella": 90, "handbag": 30, "tie": 20, "suitcase": 60, 
+    "frisbee": 30, "skis": 160, "snowboard": 160, "sports ball": 22, "kite": 150, 
+    "baseball bat": 100, "baseball glove": 30, "skateboard": 80, "surfboard": 180, 
+    "tennis racket": 70, "bottle": 10, "wine glass": 9, "cup": 10, "fork": 20, "knife": 20, 
+    "spoon": 20, "bowl": 20, "banana": 20, "apple": 15, "sandwich": 15, "orange": 15, 
+    "broccoli": 20, "carrot": 15, "hot dog": 20, "pizza": 30, "donut": 15, "cake": 30, 
+    "chair": 100, "sofa": 200, "pottedplant": 50, "bed": 200, "diningtable": 180, 
+    "toilet": 60, "tvmonitor": 100, "laptop": 40, "mouse": 10, "remote": 20, "keyboard": 45, 
+    "cell phone": 15, "microwave": 50, "oven": 60, "toaster": 30, "sink": 60, "refrigerator": 150,
+    "book": 30, "clock": 30, "vase": 30, "scissors": 20, "teddy bear": 40, "hair drier": 30, 
+    "toothbrush": 20
+}
+
+# Focal length (calibrated for a Dell laptop webcam)
+FOCAL_LENGTH = 500  # Approximate value, should be calibrated for accuracy
+
+# Start Webcam
 cap = cv2.VideoCapture(0)
 
+# Timer setup
+last_update_time = time.time()
+distance_results = {}  # Stores the last calculated distance
+
 while True:
-    engine = pyttsx3.init()
     ret, frame = cap.read()
-    height, width, channels = frame.shape
+    height, width, _ = frame.shape
 
-    blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
+    # Convert image to YOLO format
+    blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), swapRB=True, crop=False)
     yolo_net.setInput(blob)
-    outs = yolo_net.forward(output_layers)
+    detections = yolo_net.forward(output_layers)
 
-    class_ids = []
-    confidences = []
-    boxes = []
-    for out in outs:
-        for detection in out:
-            scores = detection[5:]
+    detected_objects = {}
+
+    # Process detections
+    for detection in detections:
+        for obj in detection:
+            scores = obj[5:]
             class_id = np.argmax(scores)
             confidence = scores[class_id]
-            if confidence > 0.5:
-                center_x = int(detection[0] * width)
-                center_y = int(detection[1] * height)
-                w = int(detection[2] * width)
-                h = int(detection[3] * height)
 
+            if confidence > 0.5:
+                label = classes[class_id] if class_id < len(classes) else "unknown"
+                if label not in KNOWN_WIDTHS:
+                    continue  # Ignore unknown objects
+
+                # Get bounding box dimensions
+                center_x, center_y, w, h = (
+                    int(obj[0] * width),
+                    int(obj[1] * height),
+                    int(obj[2] * width),
+                    int(obj[3] * height),
+                )
                 x = int(center_x - w / 2)
                 y = int(center_y - h / 2)
 
-                boxes.append([x, y, w, h])
-                confidences.append(float(confidence))
-                class_ids.append(class_id)
+                # Store detected objects for averaging
+                if label not in detected_objects:
+                    detected_objects[label] = {"x": [], "y": [], "w": [], "h": [], "distances": []}
 
-    indexes = cv2.dnn.NMSBoxes(boxes, confidences, score_threshold=0.5, nms_threshold=0.4)
+                detected_objects[label]["x"].append(x)
+                detected_objects[label]["y"].append(y)
+                detected_objects[label]["w"].append(w)
+                detected_objects[label]["h"].append(h)
 
-    if len(indexes) > 0:
-        for i in indexes.flatten():
-            x, y, w, h = boxes[i]
-            label = str(classes[class_ids[i]])
-            confidence = confidences[i]
-            color = (0, 255, 0)
+                # Calculate distance (only update every 10 seconds)
+                if time.time() - last_update_time >= 10:
+                    real_width = KNOWN_WIDTHS[label]
+                    distance = (real_width * FOCAL_LENGTH) / w
+                    detected_objects[label]["distances"].append(distance)
 
-            cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
-            cv2.putText(frame, f"{label} {confidence:.2f}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    # If 10 seconds passed, update distances and reset timer
+    if time.time() - last_update_time >= 5:
+        for label, data in detected_objects.items():
+            if data["distances"]:
+                avg_distance = np.mean(data["distances"])
+                distance_results[label] = avg_distance  # Store the calculated distance
+        last_update_time = time.time()  # Reset timer
 
-            if class_ids[i] in [3, 6, 8]:  # car, bus, truck
-                if confidence >= 0.5:
-                    mid_x = (x + x + w) / 2
-                    mid_y = (y + y + h) / 2
-                    apx_distance = round(((1 - (h / height)) ** 4), 1)
-                    cv2.putText(frame, '{}'.format(apx_distance), (int(mid_x * 800), int(mid_y * 450)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+    # Draw bounding boxes
+    for label, data in detected_objects.items():
+        avg_x = int(np.mean(data["x"]))
+        avg_y = int(np.mean(data["y"]))
+        avg_w = int(np.mean(data["w"]))
+        avg_h = int(np.mean(data["h"]))
 
-                    if apx_distance <= 0.5:
-                        if 0.3 < mid_x / width < 0.7:
-                            cv2.putText(frame, 'WARNING!!!', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 3)
-                            print("Warning - Vehicles Approaching")
-                            engine.say("Warning - Vehicles Approaching")
+        # Draw bounding box
+        cv2.rectangle(frame, (avg_x, avg_y), (avg_x + avg_w, avg_y + avg_h), (0, 255, 0), 2)
 
-            if class_ids[i] == 40:  # bottle
-                if confidence >= 0.5:
-                    mid_x = (x + x + w) / 2
-                    mid_y = (y + y + h) / 2
-                    apx_distance = round(((1 - (h / height)) ** 4), 1)
-                    cv2.putText(frame, '{}'.format(apx_distance), (int(mid_x * 800), int(mid_y * 450)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-                    print(apx_distance)
-                    engine.say(apx_distance)
-                    engine.say("units")
-                    engine.say("BOTTLE IS AT A SAFER DISTANCE")
+        # Display the last computed distance (updates every 10s)
+        distance_value = distance_results.get(label, None)
+        if distance_value is not None:
+            distance_text = f"{label}: {distance_value:.2f} cm"
+        else:
+            distance_text = f"{label}: Calculating..."
+        cv2.putText(frame, distance_text, (avg_x, avg_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-                    if apx_distance <= 0.5:
-                        if 0.3 < mid_x / width < 0.7:
-                            cv2.putText(frame, 'WARNING!!!', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 3)
-                            print("Warning - BOTTLE very close to the frame")
-                            engine.say("Warning - BOTTLE very close to the frame")
+    cv2.imshow("YOLO Object Detection with Distance Measurement", frame)
 
-            if class_ids[i] == 0:  # person
-                print("Person Detected")
-                if confidence >= 0.5:
-                    mid_x = (x + x + w) / 2
-                    mid_y = (y + y + h) / 2
-                    apx_distance = round(((1 - (h / height)) ** 4), 1)
-                    cv2.putText(frame, '{}'.format(apx_distance), (int(mid_x * 800), int(mid_y * 450)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-                    print(apx_distance)
-                    engine.say(apx_distance)
-                    #time.sleep(1)
-                    engine.say("units")
-                    engine.say("Person is AT A SAFER DISTANCE")
-
-                    if apx_distance <= 0.5:
-                        if 0.3 < mid_x / width < 0.7:
-                            cv2.putText(frame, 'WARNING!!!', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 3)
-                            print("Warning - Person very close to the frame")
-                            engine.say("Warning - Person very close to the frame")
-
-        engine.runAndWait()
-        if engine._inLoop:
-            engine.endLoop()
-
-    cv2.imshow("YOLO Object Detection", frame)
-    cv2.waitKey(1)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
 cap.release()

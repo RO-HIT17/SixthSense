@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+import time
 # Load YOLO Model
 yolo_net = cv2.dnn.readNet("yolov3.weights", "yolov3.cfg")
 layer_names = yolo_net.getLayerNames()
@@ -44,6 +44,10 @@ FOCAL_LENGTH = 500  # Approximate value, should be calibrated for accuracy
 # Start Webcam
 cap = cv2.VideoCapture(0)
 
+# Timer setup
+last_update_time = time.time()
+distance_results = {}  # Stores the last calculated distance
+
 while True:
     ret, frame = cap.read()
     height, width, _ = frame.shape
@@ -63,7 +67,7 @@ while True:
             confidence = scores[class_id]
 
             if confidence > 0.5:
-                label = classes[class_id]
+                label = classes[class_id] if class_id < len(classes) else "unknown"
                 if label not in KNOWN_WIDTHS:
                     continue  # Ignore unknown objects
 
@@ -77,10 +81,6 @@ while True:
                 x = int(center_x - w / 2)
                 y = int(center_y - h / 2)
 
-                # Calculate distance
-                real_width = KNOWN_WIDTHS[label]
-                distance = (real_width * FOCAL_LENGTH) / w
-
                 # Store detected objects for averaging
                 if label not in detected_objects:
                     detected_objects[label] = {"x": [], "y": [], "w": [], "h": [], "distances": []}
@@ -89,19 +89,37 @@ while True:
                 detected_objects[label]["y"].append(y)
                 detected_objects[label]["w"].append(w)
                 detected_objects[label]["h"].append(h)
-                detected_objects[label]["distances"].append(distance)
 
-    # Draw averaged bounding boxes
+                # Calculate distance (only update every 10 seconds)
+                if time.time() - last_update_time >= 10:
+                    real_width = KNOWN_WIDTHS[label]
+                    distance = (real_width * FOCAL_LENGTH) / w
+                    detected_objects[label]["distances"].append(distance)
+
+    # If 10 seconds passed, update distances and reset timer
+    if time.time() - last_update_time >= 5:
+        for label, data in detected_objects.items():
+            if data["distances"]:
+                avg_distance = np.mean(data["distances"])
+                distance_results[label] = avg_distance  # Store the calculated distance
+        last_update_time = time.time()  # Reset timer
+
+    # Draw bounding boxes
     for label, data in detected_objects.items():
         avg_x = int(np.mean(data["x"]))
         avg_y = int(np.mean(data["y"]))
         avg_w = int(np.mean(data["w"]))
         avg_h = int(np.mean(data["h"]))
-        avg_distance = np.mean(data["distances"])
 
-        # Draw bounding box and display distance
+        # Draw bounding box
         cv2.rectangle(frame, (avg_x, avg_y), (avg_x + avg_w, avg_y + avg_h), (0, 255, 0), 2)
-        distance_text = f"{label}: {avg_distance:.2f} cm"
+
+        # Display the last computed distance (updates every 10s)
+        distance_value = distance_results.get(label, None)
+        if distance_value is not None:
+            distance_text = f"{label}: {distance_value:.2f} cm"
+        else:
+            distance_text = f"{label}: Calculating..."
         cv2.putText(frame, distance_text, (avg_x, avg_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
     cv2.imshow("YOLO Object Detection with Distance Measurement", frame)
