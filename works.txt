@@ -1,0 +1,9 @@
+Completed:
+- Detect Objects
+- Detect Distances
+
+Todo:
+- Improve Object Detection Data and Depth
+- Reduce Latency
+- Navigation
+- Mobile App Development

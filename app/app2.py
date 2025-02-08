@@ -8,23 +8,12 @@ engine = pyttsx3.init()
 engine.setProperty('rate', 150)  # Adjust speaking speed
 
 # Load YOLO Model
-yolo_net = cv2.dnn.readNet("yolov3.weights", "yolov3.cfg")
+yolo_net = cv2.dnn.readNet("model\yolov3.weights", "model\yolov3.cfg")
 layer_names = yolo_net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
 
-# Define classes and real-world widths (in cm)
-classes = [
-    "person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
-    "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", 
-    "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", 
-    "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball",
-    "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", 
-    "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", 
-    "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
-    "sofa", "pottedplant", "bed", "diningtable", "toilet", "tvmonitor", "laptop", "mouse", 
-    "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
-    "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
-]
+with open("model\coco.names", "r") as f:
+    classes = [line.strip() for line in f.readlines()]
 
 KNOWN_WIDTHS = {
     "person": 40, "bicycle": 65, "car": 150, "motorbike": 70, "aeroplane": 500, "bus": 250, 
@@ -44,13 +33,9 @@ KNOWN_WIDTHS = {
     "toothbrush": 20
 }
 
-# Focal length (calibrated for a Dell laptop webcam)
-FOCAL_LENGTH = 500  # Approximate value, should be calibrated for accuracy
+FOCAL_LENGTH = 500
+CRITICAL_DISTANCE = 50
 
-# Critical distance threshold for warnings (in cm)
-CRITICAL_DISTANCE = 50  # Adjust as needed
-
-# Start Webcam
 cap = cv2.VideoCapture(0)
 last_update_time = time.time()
 distance_results = {}
@@ -95,14 +80,16 @@ while True:
                     real_width = KNOWN_WIDTHS[label]
                     distance = (real_width * FOCAL_LENGTH) / w
                     detected_objects[label]["distances"].append(distance)
-
+    alt=[]
     if time.time() - last_update_time >= 10:
         for label, data in detected_objects.items():
+            
             if data["distances"]:
                 avg_distance = np.mean(data["distances"])
                 distance_results[label] = avg_distance
                 if avg_distance < CRITICAL_DISTANCE:
                     warning_message = f"Warning! {label} is too close: {avg_distance:.2f} cm"
+                    alt.append(warning_message)
         last_update_time = time.time()
 
     for label, data in detected_objects.items():
@@ -116,7 +103,7 @@ while True:
         distance_text = f"{label}: {distance_value:.2f} cm" if distance_value else f"{label}: Calculating..."
         cv2.putText(frame, distance_text, (avg_x, avg_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    if warning_message:
+    for warning_message in alt:
         print(warning_message)
         engine.say(warning_message)
         engine.runAndWait()
