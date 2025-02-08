@@ -5,8 +5,12 @@ Visually Challenged Navigator (Real Time + On Command)
 
 Features:
 - Real Time Object Detection , Obstacle Detection and Warning 
-- Complete Navigation(Indoor and Outdoor) from place to place using voice commands
+- Complete Navigation(Indoor anutdoor) from place to place using voice commands
 - Voice Command and Conversational Interface
 - Describe specific image , face recognition , text recognition
 - Describe Whats Happening Around
 - Assistant Features - Texting,Calling
+
+WorkFlow:
+User opens Mobile App / Camera and provides live feed then it detects the object around them in their way
+also when said an end location it provide directions to them along with detecting objects with distance in their way
