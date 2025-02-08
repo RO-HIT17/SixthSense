@@ -1,78 +1,61 @@
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { useState, useRef } from 'react';
-import { Button, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
-import axios from 'axios';
-import { Audio } from 'expo-av';
+import React, { useState, useEffect, useRef } from "react";
+import { View, Button, Text } from "react-native";
+import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
+import { io } from "socket.io-client";
 
-export default function App() {
-  const [facing, setFacing] = useState<CameraType>('back');
-  const [permission, requestPermission] = useCameraPermissions();
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+export default function LiveStream() {
   const cameraRef = useRef<any>(null);
+  const [facing, setFacing] = useState<CameraType>("back");
+  const [permission, requestPermission] = useCameraPermissions();
+  const [socket, setSocket] = useState<any>(null);
+  const [detectedObjects, setDetectedObjects] = useState<string[]>([]);
 
-  if (!permission) return <View />;
-  if (!permission.granted) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.message}>We need your permission to use the camera</Text>
-        <Button onPress={requestPermission} title="Grant Permission" />
-      </View>
-    );
-  }
-  const SERVER_URL = 'http://192.168.29.251:5000';
-  async function captureAndSendImage() {
-    if (cameraRef.current) {
+  useEffect(() => {
+    const newSocket = io("http://192.168.29.251:5000", { transports: ["websocket"] });
+    setSocket(newSocket);
+  
+    newSocket.on("connect", () => {
+      console.log("✅ Connected to WebSocket Server!");
+    });
+  
+    newSocket.on("connect_error", (err) => {
+      console.error("❌ WebSocket Connection Failed:", err);
+    });
+  
+    newSocket.on("response", (data) => {
+      console.log("📩 Received Response:", data);
+      setDetectedObjects(data.objects);
+    });
+  
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+  
+
+  async function startStreaming() {
+    if (!cameraRef.current) return;
+
+    setInterval(async () => {
       const photo = await cameraRef.current.takePictureAsync({ base64: true });
-      setCapturedImage(photo.uri); // Show captured image
-      const base64Image = photo.base64;
-     
 
-      try {
-        const response = await axios.post(`${SERVER_URL}/detect`, { image: base64Image });
-        console.log(response.data);
-
-        // If there is an audio alert, play it
-        if (response.data.alert) {
-          playAudioAlert();
-        }
-      } catch (error) {
-        console.error("Error sending image:", error);
+      if (socket) {
+        socket.emit("send_frame", { image: photo.base64 });
       }
-    }
-  }
-
-  async function playAudioAlert() {
-    try {
-      const sound = new Audio.Sound();
-      await sound.loadAsync({ uri: `${SERVER_URL}/alert.mp3` });
-      await sound.playAsync();
-    } catch (error) {
-      console.error("Error playing audio:", error);
-    }
+    }, 500); // Send frame every 100ms
   }
 
   return (
-    <View style={styles.container}>
-      <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={captureAndSendImage}>
-          <Text style={styles.text}>Capture & Detect</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}>
-          <Text style={styles.text}>Flip Camera</Text>
-        </TouchableOpacity>
-      </View>
-      {capturedImage && <Image source={{ uri: capturedImage }} style={styles.preview} />}
+    <View style={{ flex: 1 }}>
+      {permission?.granted ? (
+        <>
+          <CameraView ref={cameraRef} facing={facing} style={{ height: 500 }} />
+          <Button title="Start Streaming" onPress={startStreaming} />
+          <Text>Detected Objects: {detectedObjects.join(", ")}</Text>
+        </>
+      ) : (
+        <Button title="Grant Camera Permission" onPress={requestPermission} />
+      )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center' },
-  camera: { flex: 1 },
-  buttonContainer: { flexDirection: 'row', justifyContent: 'center', padding: 20 },
-  button: { backgroundColor: 'blue', padding: 10, margin: 10, borderRadius: 5 },
-  text: { color: 'white', fontWeight: 'bold' },
-  preview: { width: 200, height: 200, alignSelf: 'center', marginTop: 20 },
-  message: { textAlign: 'center', margin: 20, fontSize: 18, color: 'red' },
-});
