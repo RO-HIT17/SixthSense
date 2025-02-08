@@ -10,10 +10,10 @@ app = Flask(__name__)
 CORS(app)
 
 # Load YOLO model
-yolo_net = cv2.dnn.readNet("model\yolo.weights", "model\yolo.cfg")
-layer_names = yolo_net.getLayerNames()
-output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
-class_labels = open("model\coco.names").read().strip().split("\n")  # Load class names
+net = cv2.dnn.readNet("C:\Rohit\Projects\SixthSense\model\yolov3.weights", "C:\Rohit\Projects\SixthSense\model\yolov3.cfg")
+layer_names = net.getLayerNames()
+output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
+classes = open("C:\Rohit\Projects\SixthSense\model\coco.names").read().strip().split("\n")
 
 # Function to process image using YOLO
 def process_image(image):

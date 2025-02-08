@@ -7,3 +7,7 @@ Todo:
 - Reduce Latency (Yolov4 , )
 - Navigation - GMaps,Indoor , Outdoor
 - Mobile App Development
+
+
+- live feed
+- bound boxes

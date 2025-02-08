@@ -8,11 +8,11 @@ engine = pyttsx3.init()
 engine.setProperty('rate', 150)  # Adjust speaking speed
 
 # Load YOLO Model
-yolo_net = cv2.dnn.readNet("model\yolov3.weights", "model\yolov3.cfg")
+yolo_net = cv2.dnn.readNet("C:\Rohit\Projects\SixthSense\model\yolov3.weights", "C:\Rohit\Projects\SixthSense\model\yolov3.cfg")
 layer_names = yolo_net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
 
-with open("model\coco.names", "r") as f:
+with open("C:\Rohit\Projects\SixthSense\model\coco.names", "r") as f:
     classes = [line.strip() for line in f.readlines()]
 
 KNOWN_WIDTHS = {

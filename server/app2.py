@@ -9,10 +9,10 @@ app = Flask(__name__)
 CORS(app)  # Allow requests from React Native app
 
 # Load YOLO Model
-net = cv2.dnn.readNet("model\yolov3.weights", "model\yolov3.cfg")
+net = cv2.dnn.readNet("C:\Rohit\Projects\SixthSense\model\yolov3.weights", "C:\Rohit\Projects\SixthSense\model\yolov3.cfg")
 layer_names = net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
-classes = open("model\coco.names").read().strip().split("\n")
+classes = open("C:\Rohit\Projects\SixthSense\model\coco.names").read().strip().split("\n")
 
 @app.route("/detect", methods=["POST"])
 def detect_objects():
