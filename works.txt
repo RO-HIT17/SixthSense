@@ -4,6 +4,6 @@ Completed:
 
 Todo:
 - Improve Object Detection Data and Depth
-- Reduce Latency
-- Navigation
+- Reduce Latency (Yolov4 , )
+- Navigation - GMaps,Indoor , Outdoor
 - Mobile App Development
