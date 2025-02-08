@@ -4,10 +4,11 @@ Completed:
 
 Todo:
 - Improve Object Detection Data and Depth
-- Reduce Latency (Yolov4 , )
+- Reduce Latency (Yolov4 , MobileNet)
 - Navigation - GMaps,Indoor , Outdoor
 - Mobile App Development
 
+Read chat
 
 - live feed
 - bound boxes

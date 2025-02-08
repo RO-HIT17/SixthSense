@@ -1,17 +1,16 @@
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { useRef, useState } from 'react';
-import { Button, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState, useRef } from 'react';
+import { Button, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import axios from 'axios';
+import { Audio } from 'expo-av';
 
 export default function App() {
   const [facing, setFacing] = useState<CameraType>('back');
-  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef<CameraView | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const cameraRef = useRef<any>(null);
 
-  if (!permission) {
-    return <View />;
-  }
-
+  if (!permission) return <View />;
   if (!permission.granted) {
     return (
       <View style={styles.container}>
@@ -20,90 +19,60 @@ export default function App() {
       </View>
     );
   }
-
-  function toggleCameraFacing() {
-    setFacing((current) => (current === 'back' ? 'front' : 'back'));
-  }
-
-  async function takePicture() {
+  const SERVER_URL = 'http://192.168.29.251:5000';
+  async function captureAndSendImage() {
     if (cameraRef.current) {
+      const photo = await cameraRef.current.takePictureAsync({ base64: true });
+      setCapturedImage(photo.uri); // Show captured image
+      const base64Image = photo.base64;
+     
+
       try {
-        const photo = await cameraRef.current.takePictureAsync();
-        if (photo) {
-          setCapturedPhoto(photo.uri);
-          console.log("Captured Image URI:", photo.uri);
+        const response = await axios.post(`${SERVER_URL}/detect`, { image: base64Image });
+        console.log(response.data);
+
+        // If there is an audio alert, play it
+        if (response.data.alert) {
+          playAudioAlert();
         }
       } catch (error) {
-        console.error("Error capturing image:", error);
+        console.error("Error sending image:", error);
       }
+    }
+  }
+
+  async function playAudioAlert() {
+    try {
+      const sound = new Audio.Sound();
+      await sound.loadAsync({ uri: `${SERVER_URL}/alert.mp3` });
+      await sound.playAsync();
+    } catch (error) {
+      console.error("Error playing audio:", error);
     }
   }
 
   return (
     <View style={styles.container}>
-      <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-            <Text style={styles.text}>Flip Camera</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.button} onPress={takePicture}>
-            <Text style={styles.text}>Capture</Text>
-          </TouchableOpacity>
-        </View>
-      </CameraView>
-
-      {capturedPhoto && (
-        <View style={styles.previewContainer}>
-          <Text style={styles.previewText}>Captured Image:</Text>
-          <Image source={{ uri: capturedPhoto }} style={styles.previewImage} />
-        </View>
-      )}
+      <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button} onPress={captureAndSendImage}>
+          <Text style={styles.text}>Capture & Detect</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}>
+          <Text style={styles.text}>Flip Camera</Text>
+        </TouchableOpacity>
+      </View>
+      {capturedImage && <Image source={{ uri: capturedImage }} style={styles.preview} />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  message: {
-    textAlign: 'center',
-    paddingBottom: 10,
-  },
-  camera: {
-    flex: 1,
-  },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 30,
-    flexDirection: 'row',
-    width: '100%',
-    justifyContent: 'space-evenly',
-  },
-  button: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    padding: 15,
-    borderRadius: 10,
-  },
-  text: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  previewContainer: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  previewText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  previewImage: {
-    width: 300,
-    height: 400,
-    borderRadius: 10,
-  },
+  container: { flex: 1, justifyContent: 'center' },
+  camera: { flex: 1 },
+  buttonContainer: { flexDirection: 'row', justifyContent: 'center', padding: 20 },
+  button: { backgroundColor: 'blue', padding: 10, margin: 10, borderRadius: 5 },
+  text: { color: 'white', fontWeight: 'bold' },
+  preview: { width: 200, height: 200, alignSelf: 'center', marginTop: 20 },
+  message: { textAlign: 'center', margin: 20, fontSize: 18, color: 'red' },
 });
