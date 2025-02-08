@@ -1,61 +1,123 @@
-import React, { useState, useEffect, useRef } from "react";
-import { View, Button, Text } from "react-native";
-import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
-import { io } from "socket.io-client";
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { useState, useRef, useEffect } from 'react';
+import { Button, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import { io } from 'socket.io-client';
+import { Audio } from 'expo-av';
 
-export default function LiveStream() {
-  const cameraRef = useRef<any>(null);
-  const [facing, setFacing] = useState<CameraType>("back");
+export default function App() {
+  const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
-  const [socket, setSocket] = useState<any>(null);
-  const [detectedObjects, setDetectedObjects] = useState<string[]>([]);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [connected, setConnected] = useState(false);
+  const cameraRef = useRef<any>(null);
+  const socketRef = useRef<any>(null);
 
   useEffect(() => {
-    const newSocket = io("http://192.168.29.251:5000", { transports: ["websocket"] });
-    setSocket(newSocket);
-  
-    newSocket.on("connect", () => {
-      console.log("✅ Connected to WebSocket Server!");
+    // Initialize socket connection
+    socketRef.current = io('http://192.168.29.251:5000');
+
+    socketRef.current.on('connect', () => {
+      console.log('Connected to server');
+      setConnected(true);
     });
-  
-    newSocket.on("connect_error", (err) => {
-      console.error("❌ WebSocket Connection Failed:", err);
+
+    socketRef.current.on('disconnect', () => {
+      console.log('Disconnected from server');
+      setConnected(false);
     });
-  
-    newSocket.on("response", (data) => {
-      console.log("📩 Received Response:", data);
-      setDetectedObjects(data.objects);
+
+    socketRef.current.on('detection_response', (data: any) => {
+      console.log('Received detection:', data);
+      if (data.success && data.objects?.length > 0) {
+        playAudioAlert();
+      }
     });
-  
+
     return () => {
-      newSocket.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
     };
   }, []);
-  
 
-  async function startStreaming() {
-    if (!cameraRef.current) return;
+  if (!permission) return <View />;
+  if (!permission.granted) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.message}>We need your permission to use the camera</Text>
+        <Button onPress={requestPermission} title="Grant Permission" />
+      </View>
+    );
+  }
 
-    setInterval(async () => {
-      const photo = await cameraRef.current.takePictureAsync({ base64: true });
+  async function captureAndSendImage() {
+    if (!connected) {
+      console.log('Not connected to server');
+      return;
+    }
 
-      if (socket) {
-        socket.emit("send_frame", { image: photo.base64 });
+    if (cameraRef.current) {
+      try {
+        const photo = await cameraRef.current.takePictureAsync({ 
+          base64: true,
+          quality: 0.5  // Reduce image quality for faster transmission
+        });
+        setCapturedImage(photo.uri);
+
+        // Send the image via WebSocket
+        socketRef.current.emit('send_frame', {
+          image: `data:image/jpeg;base64,${photo.base64}`
+        });
+      } catch (error) {
+        console.error("Error capturing/sending image:", error);
       }
-    }, 500); // Send frame every 100ms
+    }
+  }
+
+  async function playAudioAlert() {
+    try {
+      const sound = new Audio.Sound();
+      await sound.loadAsync({ uri: 'http://192.168.29.87:5000/alert.mp3' });
+      await sound.playAsync();
+    } catch (error) {
+      console.error("Error playing audio:", error);
+    }
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      {permission?.granted ? (
-        <>
-          <CameraView ref={cameraRef} facing={facing} style={{ height: 500 }} />
-          <Button title="Start Streaming" onPress={startStreaming} />
-          <Text>Detected Objects: {detectedObjects.join(", ")}</Text>
-        </>
-      ) : (
-        <Button title="Grant Camera Permission" onPress={requestPermission} />
-      )}
+    <View style={styles.container}>
+      <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity 
+          style={[styles.button, !connected && styles.buttonDisabled]} 
+          onPress={captureAndSendImage}
+          disabled={!connected}
+        >
+          <Text style={styles.text}>
+            {connected ? 'Capture & Detect' : 'Connecting...'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
+        >
+          <Text style={styles.text}>Flip Camera</Text>
+        </TouchableOpacity>
+      </View>
+      {capturedImage && <Image source={{ uri: capturedImage }} style={styles.preview} />}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: 'center' },
+  camera: { flex: 1 },
+  buttonContainer: { flexDirection: 'row', justifyContent: 'center', padding: 20 },
+  button: { backgroundColor: 'blue', padding: 10, margin: 10, borderRadius: 5 },
+  text: { color: 'white', fontWeight: 'bold' },
+  preview: { width: 200, height: 200, alignSelf: 'center', marginTop: 20 },
+  message: { textAlign: 'center', margin: 20, fontSize: 18, color: 'red' },
+  buttonDisabled: {
+    backgroundColor: 'grey',
+  }
+});
