@@ -1,11 +1,13 @@
 import cv2
 import numpy as np
-import pyttsx3
 import time
 # Load YOLO Model
 yolo_net = cv2.dnn.readNet("yolov3.weights", "yolov3.cfg")
 layer_names = yolo_net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
+
+engine = pyttsx3.init()
+engine.setProperty("rate", 150) 
 
 # Define classes and real-world widths (in cm)
 classes = [
@@ -61,7 +63,6 @@ while True:
     detected_objects = {}
 
     # Process detections
-    
     for detection in detections:
         for obj in detection:
             scores = obj[5:]
