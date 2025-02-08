@@ -7,10 +7,10 @@ layer_names = yolo_net.getLayerNames()
 output_layers = [layer_names[i-1] for i in yolo_net.getUnconnectedOutLayers()]
 
 # Define classes (use the classes from your dataset)
-classes = ["person", "car", "dog", "bicycle", "cell phone"]  
+classes = ["person", "car", "dog", "bicycle", "cell phone","bottle"]  
 
 # Focal Length (calibrated for your camera)
-FOCAL_LENGTH = 3.75  # Change based on your calibration
+FOCAL_LENGTH = 500  # Change based on your calibration
 
 # Define real-world object widths (in cm) for objects you want to measure
 KNOWN_WIDTHS = {
@@ -18,7 +18,8 @@ KNOWN_WIDTHS = {
     "car": 150,    # Approximate car width
     "dog": 50,     # Approximate dog width
     "bicycle": 65,
-    "cell phone":15# Approximate bicycle width
+    "cell phone":15,
+    "bottle":15# Approximate bicycle width
 }
 
 # Start Webcam
