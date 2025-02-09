@@ -1,67 +1,81 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask_socketio import SocketIO
 import requests
-import pyttsx3
+import googlemaps
+from gtts import gTTS
+import os
 
 app = Flask(__name__)
-CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Google Maps API Key
 GOOGLE_MAPS_API_KEY = "AIzaSyDrsZPrN-5yZhz0v1yE73gg_vphwuXRZsM"
+gmaps = googlemaps.Client(key=GOOGLE_MAPS_API_KEY)
 
-# Initialize Text-to-Speech Engine
-engine = pyttsx3.init()
+# Store navigation data for each user
+active_sessions = {}
 
-def text_to_speech(text):
-    """Convert text to speech and play it"""
-    engine.say(text)
-    engine.runAndWait()
+@app.route("/start-navigation", methods=["POST"])
+def start_navigation():
+    """Fetches navigation waypoints and sends initial instructions"""
+    data = request.json
+    origin = data.get("origin")
+    destination = data.get("destination")
 
-@app.route("/get-directions", methods=["POST"])
-def get_directions():
-    try:
-        data = request.get_json()
-        origin = data.get("origin")  # Example: "New York"
-        destination = data.get("destination")  # Example: "Los Angeles"
+    if not origin or not destination:
+        return jsonify({"error": "Missing origin or destination"}), 400
 
-        if not origin or not destination:
-            return jsonify({"error": "Missing origin or destination"}), 400
+    # Fetch directions from Google Maps API
+    directions = gmaps.directions(origin, destination, mode="walking")
 
-        # Get lat/lon for place names using Geocoding API
-        geocode_origin = requests.get(f"https://maps.googleapis.com/maps/api/geocode/json?address={origin}&key={GOOGLE_MAPS_API_KEY}").json()
-        geocode_destination = requests.get(f"https://maps.googleapis.com/maps/api/geocode/json?address={destination}&key={GOOGLE_MAPS_API_KEY}").json()
+    if not directions:
+        return jsonify({"error": "Could not fetch directions"}), 500
 
-        if not geocode_origin["results"] or not geocode_destination["results"]:
-            return jsonify({"error": "Invalid place name"}), 400
+    steps = directions[0]['legs'][0]['steps']
+    waypoints = []
 
-        origin_coords = geocode_origin["results"][0]["geometry"]["location"]
-        destination_coords = geocode_destination["results"][0]["geometry"]["location"]
+    for step in steps:
+        location = step['start_location']
+        instruction = step['html_instructions']
+        waypoints.append({
+            "lat": location['lat'],
+            "lng": location['lng'],
+            "instruction": instruction
+        })
 
-        origin_latlon = f"{origin_coords['lat']},{origin_coords['lng']}"
-        destination_latlon = f"{destination_coords['lat']},{destination_coords['lng']}"
+    session_id = origin + "-" + destination  # Unique session ID
+    active_sessions[session_id] = waypoints
 
-        # Get directions from Google Maps Directions API
-        google_maps_url = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin_latlon}&destination={destination_latlon}&key={GOOGLE_MAPS_API_KEY}"
-        response = requests.get(google_maps_url)
-        data = response.json()
+    return jsonify({"session_id": session_id, "waypoints": waypoints})
 
-        if "routes" not in data or len(data["routes"]) == 0:
-            return jsonify({"error": "No route found"}), 404
 
-        # Extract step-by-step navigation
-        steps = []
-        for step in data["routes"][0]["legs"][0]["steps"]:
-            instruction = step["html_instructions"].replace("<b>", "").replace("</b>", "").replace("&nbsp;", " ")
-            steps.append(instruction)
+@socketio.on("location_update")
+def handle_location_update(data):
+    """Listens for live user location updates & sends next instruction"""
+    session_id = data.get("session_id")
+    user_lat = data.get("lat")
+    user_lng = data.get("lng")
 
-        # Convert text directions into speech
-        full_instructions = ". ".join(steps)
-        #text_to_speech(full_instructions)
+    if session_id not in active_sessions:
+        return
 
-        return jsonify({"directions": steps})
+    waypoints = active_sessions[session_id]
+    
+    for index, waypoint in enumerate(waypoints):
+        lat, lng, instruction = waypoint["lat"], waypoint["lng"], waypoint["instruction"]
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        # Check if the user is near the next waypoint
+        if abs(user_lat - lat) < 0.0005 and abs(user_lng - lng) < 0.0005:
+            socketio.emit("navigation_instruction", {"instruction": instruction})
+
+            # Convert instruction to voice
+            tts = gTTS(text=instruction, lang="en")
+            tts.save("instruction.mp3")
+            os.system("mpg321 instruction.mp3")  # Play audio
+            
+            # Remove the waypoint after reaching
+            active_sessions[session_id] = waypoints[index+1:]
+            break
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)

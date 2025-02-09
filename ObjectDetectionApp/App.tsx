@@ -1,112 +1,76 @@
 import React, { useEffect, useState } from "react";
-import { View, Button, Alert } from "react-native";
-import MapView, { Marker, Polyline } from "react-native-maps";
-import MapViewDirections from "react-native-maps-directions";
+import { View, Text, Button, Alert } from "react-native";
 import * as Location from "expo-location";
-import * as Speech from "expo-speech";
-import axios from "axios";
+import io from "socket.io-client";
+import Tts from "react-native-tts";
 
-const GOOGLE_MAPS_APIKEY = "AIzaSyCqp2pupWd721YQPS1z2bPzVmD_F9vtiNs";
+const SERVER_URL = "http://192.168.29.251.:5000"; // Change to your Flask server IP
+const socket = io(SERVER_URL);
 
-interface LocationCoords {
-  latitude: number;
-  longitude: number;
-}
-
-export default function MapsScreen() {
-  const [location, setLocation] = useState<LocationCoords | null>(null);
-  const [destination, setDestination] = useState<LocationCoords>({
-    latitude: 37.7749, // Example: San Francisco
-    longitude: -122.4194,
-  });
-  const [routeCoords, setRouteCoords] = useState<LocationCoords[]>([]);
+export default function App() {
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [sessionId, setSessionId] = useState<string>("");
 
   useEffect(() => {
-    getLocation();
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Location access is required for navigation.");
+        return;
+      }
+
+      let loc = await Location.getCurrentPositionAsync({});
+      setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+    })();
   }, []);
 
-  async function getLocation() {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission to access location was denied");
-      return;
+  const startNavigation = async () => {
+    const response = await fetch(`${SERVER_URL}/start-navigation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ origin: "Central Park, NY", destination: "Times Square, NY" })
+    });
+
+    const data = await response.json();
+    if (data.session_id) {
+      setSessionId(data.session_id);
+      startTracking();
+    } else {
+      Alert.alert("Error", "Failed to start navigation.");
     }
+  };
 
-    let currentLocation = await Location.getCurrentPositionAsync({});
-    setLocation(currentLocation.coords);
-  }
+  const startTracking = async () => {
+    await Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, distanceInterval: 1 },
+      (loc) => {
+        setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+        socket.emit("location_update", {
+          session_id: sessionId,
+          lat: loc.coords.latitude,
+          lng: loc.coords.longitude,
+        });
+      }
+    );
+  };
 
-  async function fetchDirections() {
-    if (!location) return;
-    
-    try {
-      const response = await axios.get(
-        `https://maps.googleapis.com/maps/api/directions/json?origin=${location.latitude},${location.longitude}&destination=${destination.latitude},${destination.longitude}&key=${GOOGLE_MAPS_APIKEY}`
-      );
+  useEffect(() => {
+    const handleNavigationInstruction = (data: { instruction: string }) => {
+      Alert.alert("Navigation", data.instruction);
+      Tts.speak(data.instruction);
+    };
 
-      const points = decodePolyline(response.data.routes[0].overview_polyline.points);
-      setRouteCoords(points);
+    socket.on("navigation_instruction", handleNavigationInstruction);
 
-      const firstInstruction = response.data.routes[0].legs[0].steps[0].html_instructions;
-      Speech.speak(`Start navigation. ${stripHTML(firstInstruction)}`);
-    } catch (error) {
-      console.error("Error fetching directions:", error);
-    }
-  }
-
-  function stripHTML(html: string): string {
-    return html.replace(/<[^>]+>/g, "");
-  }
+    return () => {
+      socket.off("navigation_instruction", handleNavigationInstruction);
+    };
+  }, []);
 
   return (
-    <View style={{ flex: 1 }}>
-      <MapView
-        style={{ flex: 1 }}
-        initialRegion={{
-          latitude: location?.latitude || 37.7749,
-          longitude: location?.longitude || -122.4194,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }}
-        showsUserLocation={true}
-      >
-        {location && <Marker coordinate={location} title="You are here" />}
-        <Marker coordinate={destination} title="Destination" />
-        {routeCoords.length > 0 && (
-          <Polyline coordinates={routeCoords} strokeWidth={4} strokeColor="blue" />
-        )}
-      </MapView>
-
-      <Button title="Start Navigation" onPress={fetchDirections} />
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <Text>Live Location: {location?.latitude}, {location?.longitude}</Text>
+      <Button title="Start Navigation" onPress={startNavigation} />
     </View>
   );
-}
-
-function decodePolyline(encoded: string): LocationCoords[] {
-  let points: LocationCoords[] = [];
-  let index = 0, lat = 0, lng = 0;
-
-  while (index < encoded.length) {
-    let b, shift = 0, result = 0;
-    do {
-      b = encoded.charCodeAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-    let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
-    lat += dlat;
-
-    shift = 0;
-    result = 0;
-    do {
-      b = encoded.charCodeAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-    let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
-    lng += dlng;
-
-    points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
-  }
-  return points;
 }
