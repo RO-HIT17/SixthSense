@@ -1,13 +1,18 @@
-Sixth Sense
+Sixth Sense 
 Phase 1:
 Features:
-- Real Time Navigation by detecting objects and providing instructions (Core)
+- Real Time Navigation by detecting objects and providing instructions (Core) - Local Model( 50% done) 
 
 Phase 2:
-- Describe specific image , face recognition , text recognition
-- Describe Whats Happening Around
+- Describe specific image , face recognition , text recognition - OpenAI + ABD + Azure CV 
+- Describe Whats Happening Around You - ABD + Azure CV 
 
 Phase 3:
-- Assistant Features - Texting,Calling
-- Voice Command (Conversational) based Navigation
-- Integrating Third Party APIs
+- Assistant Features - 5,WP,Insta,Texting,Calling - OpenAI - ABD (Done)
+- Voice Command (Conversational) based Navigation OpenAI Key -> ABD
+- Integrating Third Party APIs - ABD - (Done)
+
+----------------------------------------------------------------------
+Complete This
+
+WorkFlow -> Open App Says Command (Tamil):
