@@ -9,6 +9,7 @@ export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
+  const [loading, setLoading] = useState(false);
   const cameraRef = useRef<any>(null);
   const socketRef = useRef<any>(null);
 
@@ -26,10 +27,14 @@ export default function App() {
       setConnected(false);
     });
 
-    socketRef.current.on('detection_response', (data: any) => {
-      console.log('Received detection:', data);
-      if (data.success && data.objects?.length > 0) {
-        playAudioAlert();
+    socketRef.current.on('detection_response', async (data: any) => {
+      console.log('Detection result:', data);
+      setLoading(false);
+
+      if (data.success && data.result.audio_url) {
+        const audioUrl = `http://192.168.29.251:5000${data.result.audio_url}`;
+        console.log('Playing audio from:', audioUrl);
+        await playAudio(audioUrl);
       }
     });
 
@@ -74,11 +79,19 @@ export default function App() {
     }
   }
 
-  async function playAudioAlert() {
+  async function playAudio(url: string) {
     try {
       const sound = new Audio.Sound();
-      await sound.loadAsync({ uri: 'http://192.168.29.251:5000/alert.mp3' });
-      await sound.playAsync();
+      await sound.loadAsync({ uri: url });
+      const result = await sound.playAsync();
+      console.log('Audio playback started:', result);
+      
+      // Cleanup after playback
+      sound.setOnPlaybackStatusUpdate(async (status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          await sound.unloadAsync();
+        }
+      });
     } catch (error) {
       console.error("Error playing audio:", error);
     }
@@ -119,5 +132,5 @@ const styles = StyleSheet.create({
   message: { textAlign: 'center', margin: 20, fontSize: 18, color: 'red' },
   buttonDisabled: {
     backgroundColor: 'grey',
-  }
+    }
 });
