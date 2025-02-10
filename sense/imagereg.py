@@ -4,6 +4,7 @@ import io
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
 from msrest.authentication import CognitiveServicesCredentials
+import google.generativeai as genai
 
 # 🔑 Azure CV Credentials
 AZURE_ENDPOINT = "https://horizon-test1711.cognitiveservices.azure.com/"
@@ -47,3 +48,20 @@ if description_results.captions:
         print(f"📝 Description: {caption.text} (Confidence: {caption.confidence:.2f})")
 else:
     print("❌ No description found.")
+
+if description_text != "No description found.":
+    prompt = f"""
+    Expand on the following image description with more details, context, and possible background information:
+    
+    Description: "{description_text}"
+    
+    Make it engaging, informative, and detailed.
+    """
+    
+    model = genai.GenerativeModel("gemini-pro")
+    response = model.generate_content(prompt)
+
+    expanded_description = response.text if response.text else "Failed to generate an expanded description."
+    print("\n🔹 **Expanded Description:**\n", expanded_description)
+else:
+    expanded_description = "No valid image description available for expansion."
