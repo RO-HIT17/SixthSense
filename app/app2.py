@@ -38,8 +38,9 @@ CRITICAL_DISTANCE = 50
 
 mobile_camera_url = "http://192.168.29.67:8080/video"
 # Capture Video
-cap = cv2.VideoCapture(mobile_camera_url)
+#cap = cv2.VideoCapture(mobile_camera_url)
 
+cap = cv2.VideoCapture(1)
 #cap = cv2.VideoCapture(0)
 last_update_time = time.time()
 distance_results = {}

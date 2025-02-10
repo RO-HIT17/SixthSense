@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>WebRTC Mobile Streaming</title>
+</head>
+<body>
+    <h2>Live Camera Feed</h2>
+    <video id="localVideo" autoplay playsinline></video>
+    <video id="remoteVideo" autoplay playsinline></video>
+
+    <script>
+        const localVideo = document.getElementById("localVideo");
+        const remoteVideo = document.getElementById("remoteVideo");
+
+        async function startWebRTC() {
+            const socket = io.connect("http://192.168.X.X:5000");  // Flask Server IP
+            const pc = new RTCPeerConnection();
+
+            // Get video stream from mobile camera
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            localVideo.srcObject = stream;
+
+            // Send camera stream to server
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+            // Create WebRTC offer
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            socket.emit("offer", { sdp: offer.sdp, type: offer.type });
+
+            socket.on("answer", async (data) => {
+                await pc.setRemoteDescription(new RTCSessionDescription(data));
+            });
+
+            pc.ontrack = (event) => {
+                remoteVideo.srcObject = event.streams[0];
+            };
+        }
+
+        startWebRTC();
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</body>
+</html>
