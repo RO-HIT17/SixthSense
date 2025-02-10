@@ -1,8 +1,10 @@
-import cv2
 import os
 import io
 import time
-import pyttsx3  # 🔊 Text-to-Speech
+import pyttsx3
+import cv2
+import subprocess  # For running ADB commands
+from PIL import Image
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
 from msrest.authentication import CognitiveServicesCredentials
@@ -12,44 +14,34 @@ import google.generativeai as genai
 AZURE_ENDPOINT = "https://horizon-test1711.cognitiveservices.azure.com/"
 AZURE_KEY = "6a2U9CnbPO2JqPY9Doi5LEVemTW0F5jI6nVnFg0Td1JGCvGCi2l0JQQJ99BBACYeBjFXJ3w3AAAFACOGC0BT"
 
-# 🔑 Gemini API Key
-GEMINI_API_KEY = "AIzaSyDPwijZg1zvbofMjpdVogd3yABXcwP7Otc"  # Replace with your API key
+# 🔑 Gemini AI API Key
+GEMINI_API_KEY = "AIzaSyDPwijZg1zvbofMjpdVogd3yABXcwP7Otc"
 genai.configure(api_key=GEMINI_API_KEY)
 
 # 🎙️ Initialize Text-to-Speech Engine
 tts_engine = pyttsx3.init()
-tts_engine.setProperty('rate', 150)  # Adjust for slower/faster speech
 
-# 🔍 Create Azure Computer Vision Client
-client = ComputerVisionClient(AZURE_ENDPOINT, CognitiveServicesCredentials(AZURE_KEY))
+# 📱 Capture Screenshot from Mobile (Android)
+screenshot_path = "mobile_screenshot.png"
 
-# 🎥 Capture Image from Camera
-cap = cv2.VideoCapture(1)  # Use external camera
-if not cap.isOpened():
-    print("❌ Error: Could not open external camera.")
+# 🟢 Ensure ADB is connected to your mobile device
+try:
+    print("📸 Capturing screenshot from mobile...")
+    subprocess.run(["adb", "shell", "screencap", "-p", "/sdcard/screenshot.png"])
+    subprocess.run(["adb", "pull", "/sdcard/screenshot.png", screenshot_path])
+    print(f"✅ Screenshot saved as {screenshot_path}")
+except Exception as e:
+    print(f"❌ Error capturing screenshot: {e}")
     exit()
-
-ret, frame = cap.read()
-if not ret:
-    print("❌ Error: Could not capture frame.")
-    cap.release()
-    exit()
-
-# 📸 Save the captured image
-image_path = "captured_image.jpg"
-cv2.imwrite(image_path, frame)
-cap.release()
-cv2.destroyAllWindows()
-
-print(f"✅ Image captured and saved as {image_path}")
 
 # 🔍 Read the saved image
-with open(image_path, "rb") as image_file:
+with open(screenshot_path, "rb") as image_file:
     image_data = image_file.read()
 
 image_stream = io.BytesIO(image_data)  # Convert bytes to a file-like object
 
-# 📊 Call Azure CV to describe the image
+# 📊 Call Azure Computer Vision to describe the screen contents
+client = ComputerVisionClient(AZURE_ENDPOINT, CognitiveServicesCredentials(AZURE_KEY))
 description_results = client.describe_image_in_stream(image_stream)
 
 # 📝 Print the best caption
@@ -65,11 +57,11 @@ else:
 if description_text != "No description found.":
 
     prompt = f"""
-    Expand on the following image description with 1 lines, adding context, and possible background information but dont change the original meaning:
+    Describe the following mobile screen:
 
-    Description: "{description_text}"
+    Screenshot Description: "{description_text}"
 
-    Make it informative, and detailed.
+    Provide 2-3 lines description of the screen contents.
     """
 
     model = genai.GenerativeModel("gemini-pro")

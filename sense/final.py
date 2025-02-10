@@ -61,6 +61,7 @@ def analyze_text(text):
     - "image_description" → If the user wants an image described or scenario described.
     - "detect_obstacles" → If the user wants to detect obstacles in a path.
     - "ocr" → If the user wants to extract text from an image (or) identify whats written or whats there.
+    - "screen" → If the user wants to know whats on screen.
     **Instructions:**
     - Extract relevant details based on the intent.
     - If intent is unclear, return `"intent": "unknown"`.
@@ -102,6 +103,12 @@ def analyze_text(text):
        ```json
        {{"intent": "ocr"}}
        ```
+    8.User: `"Whats on the screen"`
+       Output:
+       ```json
+       {{"intent": "screen"}}
+       ```
+
 
     **User Input:** "{text}"
     """
@@ -222,7 +229,8 @@ if __name__ == "__main__":
                 os.system("python imagereg.py")
             elif intent == "ocr":
                 os.system("python ocr.py")
-            
+            elif intent == "screen":
+                os.system("python screendes.py")
             elif intent == "detect_obstacles":
                 os.system("python new.py")
                 print("🚧 Obstacle detection feature not implemented.")
