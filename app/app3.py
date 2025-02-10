@@ -4,8 +4,12 @@ from ultralytics import YOLO
 # Load custom YOLO model
 model = YOLO("yolov8n.pt")
 
+mobile_camera_url = "http://192.168.29.67:8080/video"
+# Capture Video
+cap = cv2.VideoCapture(mobile_camera_url)
+
 # Open webcam
-cap = cv2.VideoCapture(0)
+#cap = cv2.VideoCapture(0)
 
 while cap.isOpened():
     ret, frame = cap.read()

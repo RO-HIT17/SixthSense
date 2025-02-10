@@ -7,11 +7,11 @@ from PIL import Image
 
 
 # Load YOLO model
-yolo_net = cv2.dnn.readNet("yolov3.weights", "yolov3.cfg")
+yolo_net = cv2.dnn.readNet("C:\Rohit\Projects\SixthSense\model\yolov3.weights", "C:\Rohit\Projects\SixthSense\model\yolov3.cfg")
 layer_names = yolo_net.getLayerNames()
 output_layers = [layer_names[i-1] for i in yolo_net.getUnconnectedOutLayers()]
 
-with open("coco.names", "r") as f:
+with open("C:\Rohit\Projects\SixthSense\model\coco.names", "r") as f:
     classes = [line.strip() for line in f.readlines()]
 
 # Load MiDaS Depth Estimation Model
@@ -25,8 +25,9 @@ midas_transform = transforms.Compose([
     transforms.Normalize(mean=[0.5], std=[0.5])  # Normalize
 ])
 
+mobile_camera_url = "http://192.168.29.67:8080/video"
 # Capture Video
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(mobile_camera_url)
 
 while True:
     ret, frame = cap.read()
