@@ -15,7 +15,7 @@ export default function App() {
 
   useEffect(() => {
     // Initialize socket connection
-    socketRef.current = io('http://172.16.44.247:5000');
+    socketRef.current = io('http://192.168.29.251:5000');
 
     socketRef.current.on('connect', () => {
       console.log('Connected to server');
@@ -32,7 +32,7 @@ export default function App() {
       setLoading(false);
 
       if (data.success && data.result.audio_url) {
-        const audioUrl = `http://172.16.44.247:5000${data.result.audio_url}`;
+        const audioUrl = `http://192.168.29.251:5000${data.result.audio_url}`;
         console.log('Playing audio from:', audioUrl);
         await playAudio(audioUrl);
       }
