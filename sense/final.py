@@ -62,6 +62,7 @@ def analyze_text(text):
     - "detect_obstacles" → If the user wants to detect obstacles in a path.
     - "ocr" → If the user wants to extract text from an image (or) identify whats written or whats there.
     - "screen" → If the user wants to know whats on screen.
+    
     **Instructions:**
     - Extract relevant details based on the intent.
     - If intent is unclear, return `"intent": "unknown"`.
