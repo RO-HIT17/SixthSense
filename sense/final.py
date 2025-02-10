@@ -58,8 +58,9 @@ def analyze_text(text):
     - "google_search" → If the user wants to search on Google (extract query).
     - "whatsapp_message" → If the user wants to send a message on WhatsApp (extract contact name and message).
     - "navigation" → If the user wants directions (extract source and destination).
-    - "image_description" → If the user wants an image described (extract image path).
+    - "image_description" → If the user wants an image described or scenario described.
     - "detect_obstacles" → If the user wants to detect obstacles in a path.
+    - "ocr" → If the user wants to extract text from an image (or) identify whats written or whats there.
     **Instructions:**
     - Extract relevant details based on the intent.
     - If intent is unclear, return `"intent": "unknown"`.
@@ -86,17 +87,21 @@ def analyze_text(text):
        ```json
        {{"intent": "navigation", "source": "Chennai", "destination": "Bangalore"}}
        ```
-    5. User: `"Describe image at C:\\images\\dog.jpg"`
+    5. User: `"Describe whats happening"`
        Output:
        ```json
-       {{"intent": "image_description", "image_path": "C:\\images\\dog.jpg"}}
+       {{"intent": "image_description"}}
        ```
     6. User: `"Detect Obstacles"`
        Output:
        ```json
        {{"intent": "detect_obstacles"}}
        ```
-
+    7.User: `"Identify whats there"`
+       Output:
+       ```json
+       {{"intent": "ocr"}}
+       ```
 
     **User Input:** "{text}"
     """
@@ -214,9 +219,10 @@ if __name__ == "__main__":
                     start_navigation(source, destination)
 
             elif intent == "image_description":
-                image_path = result.get("image_path")
-                if image_path:
-                    describe_image(image_path)
+                os.system("python imagereg.py")
+            elif intent == "ocr":
+                os.system("python ocr.py")
+            
             elif intent == "detect_obstacles":
                 os.system("python new.py")
                 print("🚧 Obstacle detection feature not implemented.")

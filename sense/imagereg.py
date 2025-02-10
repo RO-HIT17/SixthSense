@@ -45,13 +45,18 @@ description_results = client.describe_image_in_stream(image_stream)
 # 📝 Print the best caption
 if description_results.captions:
     for caption in description_results.captions:
+        description_text=caption.text
         print(f"📝 Description: {caption.text} (Confidence: {caption.confidence:.2f})")
 else:
+    description_text = "No description found."
     print("❌ No description found.")
+GEMINI_API_KEY = "AIzaSyDPwijZg1zvbofMjpdVogd3yABXcwP7Otc"  # Replace with your API key
+genai.configure(api_key=GEMINI_API_KEY)
+
 
 if description_text != "No description found.":
     prompt = f"""
-    Expand on the following image description with more details, context, and possible background information:
+    Expand on the following image description with in a 3-4 lines, more details, context, and possible background information:
     
     Description: "{description_text}"
     

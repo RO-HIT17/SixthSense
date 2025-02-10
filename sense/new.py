@@ -3,7 +3,25 @@ import numpy as np
 import pyttsx3
 import time
 from ultralytics import YOLO
+import google.generativeai as genai
 
+GEMINI_API_KEY = "AIzaSyDPwijZg1zvbofMjpdVogd3yABXcwP7Otc"  # Replace with your API key
+genai.configure(api_key=GEMINI_API_KEY)
+
+def expand_image_description(warning):
+    prompt = f"""
+    Expand on the following warning message in a line for the navigation of blind people (sometimes instead of cms use meters/feet):
+    Description: "{warning}"
+    """
+    
+    model = genai.GenerativeModel("gemini-pro")
+    response = model.generate_content(prompt)
+
+    expanded_description = response.text if response.text else "Failed to generate an expanded description."
+    print("\n🔹 **Expanded Description:**\n", expanded_description)   
+    engine.say(expanded_description)
+    engine.runAndWait()
+ 
 # Initialize text-to-speech engine
 engine = pyttsx3.init()
 engine.setProperty('rate', 150)  # Adjust speaking speed
@@ -69,10 +87,8 @@ while cap.isOpened():
 
     # Announce warnings
     for warning in warnings:
-        print(warning)
-        engine.say(warning)
-        engine.runAndWait()
-
+        expand_image_description(warning)
+        
     cv2.imshow("YOLOv8 Distance Estimation", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
