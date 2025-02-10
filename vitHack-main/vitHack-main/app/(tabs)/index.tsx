@@ -142,7 +142,7 @@ const SpeechApp = () => {
   useEffect(() => {
     const fetchText = async () => {
       try {
-        const response = await fetch("http://172.16.45.67:5000/api/text");
+        const response = await fetch("http://172.16.44.247:5000/api/text");
         const data = await response.json();
         setApiText(data.message);
       } catch (error) {
@@ -155,9 +155,9 @@ const SpeechApp = () => {
     fetchText();
   }, []);
 
-  const sendToBackend = async (text) => {
+  const sendToBackend = async (text: string) => {
     try {
-      const response = await fetch("http://172.16.45.67:5000/api/speech", {
+      const response = await fetch("http://172.16.44.247:5000/api/speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
@@ -169,7 +169,7 @@ const SpeechApp = () => {
       const data = await response.json();
       console.log("Backend response:", data);
 
-      const textResponse = await fetch("http://172.16.45.67:5000/api/text");
+      const textResponse = await fetch("http://172.16.44.247:5000/api/text");
       const textData = await textResponse.json();
 
       setApiText(textData.message);
