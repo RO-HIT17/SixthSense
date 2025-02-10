@@ -1,5 +1,5 @@
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { io } from 'socket.io-client';
 import { Audio } from 'expo-av';
@@ -9,12 +9,15 @@ export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
-  const cameraRef = useRef<any>(null);
+  const [camera, setCamera] = useState<any>(null); // Store CameraView instance
   const socketRef = useRef<any>(null);
 
   useEffect(() => {
-    // Initialize socket connection
-    socketRef.current = io('http://192.168.29.251:5000');
+    socketRef.current = io('http://192.168.29.251:5000', {
+      transports: ['websocket'], // Use websocket transport explicitly
+      reconnectionAttempts: 5, // Retry connection
+      timeout: 5000,
+    });
 
     socketRef.current.on('connect', () => {
       console.log('Connected to server');
@@ -56,11 +59,11 @@ export default function App() {
       return;
     }
 
-    if (cameraRef.current) {
+    if (camera) {
       try {
-        const photo = await cameraRef.current.takePictureAsync({ 
+        const photo = await camera.takePictureAsync({ 
           base64: true,
-          quality: 0.5  // Reduce image quality for faster transmission
+          quality: 0.5  
         });
         setCapturedImage(photo.uri);
 
@@ -86,7 +89,7 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
+      <CameraView ref={(ref) => setCamera(ref)} style={styles.camera} facing={facing} />
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
           style={[styles.button, !connected && styles.buttonDisabled]} 
@@ -117,7 +120,5 @@ const styles = StyleSheet.create({
   text: { color: 'white', fontWeight: 'bold' },
   preview: { width: 200, height: 200, alignSelf: 'center', marginTop: 20 },
   message: { textAlign: 'center', margin: 20, fontSize: 18, color: 'red' },
-  buttonDisabled: {
-    backgroundColor: 'grey',
-  }
+  buttonDisabled: { backgroundColor: 'grey' }
 });
