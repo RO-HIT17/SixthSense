@@ -1,76 +1,123 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, Button, Alert } from "react-native";
-import * as Location from "expo-location";
-import io from "socket.io-client";
-import Tts from "react-native-tts";
-
-const SERVER_URL = "http://192.168.29.251.:5000"; // Change to your Flask server IP
-const socket = io(SERVER_URL);
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { useState, useRef, useEffect } from 'react';
+import { Button, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import { io } from 'socket.io-client';
+import { Audio } from 'expo-av';
 
 export default function App() {
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [sessionId, setSessionId] = useState<string>("");
+  const [facing, setFacing] = useState<CameraType>('back');
+  const [permission, requestPermission] = useCameraPermissions();
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [connected, setConnected] = useState(false);
+  const cameraRef = useRef<any>(null);
+  const socketRef = useRef<any>(null);
 
   useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission Denied", "Location access is required for navigation.");
-        return;
-      }
+    // Initialize socket connection
+    socketRef.current = io('http://192.168.29.251:5000');
 
-      let loc = await Location.getCurrentPositionAsync({});
-      setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-    })();
-  }, []);
-
-  const startNavigation = async () => {
-    const response = await fetch(`${SERVER_URL}/start-navigation`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ origin: "Central Park, NY", destination: "Times Square, NY" })
+    socketRef.current.on('connect', () => {
+      console.log('Connected to server');
+      setConnected(true);
     });
 
-    const data = await response.json();
-    if (data.session_id) {
-      setSessionId(data.session_id);
-      startTracking();
-    } else {
-      Alert.alert("Error", "Failed to start navigation.");
-    }
-  };
+    socketRef.current.on('disconnect', () => {
+      console.log('Disconnected from server');
+      setConnected(false);
+    });
 
-  const startTracking = async () => {
-    await Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.High, distanceInterval: 1 },
-      (loc) => {
-        setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-        socket.emit("location_update", {
-          session_id: sessionId,
-          lat: loc.coords.latitude,
-          lng: loc.coords.longitude,
-        });
+    socketRef.current.on('detection_response', (data: any) => {
+      console.log('Received detection:', data);
+      if (data.success && data.objects?.length > 0) {
+        playAudioAlert();
       }
-    );
-  };
-
-  useEffect(() => {
-    const handleNavigationInstruction = (data: { instruction: string }) => {
-      Alert.alert("Navigation", data.instruction);
-      Tts.speak(data.instruction);
-    };
-
-    socket.on("navigation_instruction", handleNavigationInstruction);
+    });
 
     return () => {
-      socket.off("navigation_instruction", handleNavigationInstruction);
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
     };
   }, []);
 
+  if (!permission) return <View />;
+  if (!permission.granted) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.message}>We need your permission to use the camera</Text>
+        <Button onPress={requestPermission} title="Grant Permission" />
+      </View>
+    );
+  }
+
+  async function captureAndSendImage() {
+    if (!connected) {
+      console.log('Not connected to server');
+      return;
+    }
+
+    if (cameraRef.current) {
+      try {
+        const photo = await cameraRef.current.takePictureAsync({ 
+          base64: true,
+          quality: 0.5  // Reduce image quality for faster transmission
+        });
+        setCapturedImage(photo.uri);
+
+        // Send only the base64 data
+        socketRef.current.emit('send_frame', {
+          image: photo.base64
+        });
+      } catch (error) {
+        console.error("Error capturing/sending image:", error);
+      }
+    }
+  }
+
+  async function playAudioAlert() {
+    try {
+      const sound = new Audio.Sound();
+      await sound.loadAsync({ uri: 'http://192.168.29.251:5000/alert.mp3' });
+      await sound.playAsync();
+    } catch (error) {
+      console.error("Error playing audio:", error);
+    }
+  }
+
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>Live Location: {location?.latitude}, {location?.longitude}</Text>
-      <Button title="Start Navigation" onPress={startNavigation} />
+    <View style={styles.container}>
+      <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity 
+          style={[styles.button, !connected && styles.buttonDisabled]} 
+          onPress={captureAndSendImage}
+          disabled={!connected}
+        >
+          <Text style={styles.text}>
+            {connected ? 'Capture & Detect' : 'Connecting...'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
+        >
+          <Text style={styles.text}>Flip Camera</Text>
+        </TouchableOpacity>
+      </View>
+      {capturedImage && <Image source={{ uri: capturedImage }} style={styles.preview} />}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: 'center' },
+  camera: { flex: 1 },
+  buttonContainer: { flexDirection: 'row', justifyContent: 'center', padding: 20 },
+  button: { backgroundColor: 'blue', padding: 10, margin: 10, borderRadius: 5 },
+  text: { color: 'white', fontWeight: 'bold' },
+  preview: { width: 200, height: 200, alignSelf: 'center', marginTop: 20 },
+  message: { textAlign: 'center', margin: 20, fontSize: 18, color: 'red' },
+  buttonDisabled: {
+    backgroundColor: 'grey',
+  }
+});
