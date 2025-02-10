@@ -190,52 +190,70 @@ def start_navigation(source, destination):
         print("✅ Navigation started successfully!")
     else:
         print(f"❌ Failed to start navigation: {response.json()}")
+import os
+import time
 
-# 🏁 Main Execution
-if __name__ == "__main__":
-    text = recognize_speech()
-    if text:
-        result = analyze_text(text)
+def main():
+    while True:
+        text = recognize_speech()
+        
+        if text:
+            if text.lower().strip() in ["exit", "quit"]:
+                print("👋 Exiting program. Goodbye!")
+                break  # Exit the loop
+            
+            result = analyze_text(text)
+            
+            if result:
+                intent = result.get("intent")
 
-        if result:
-            intent = result.get("intent")
+                if intent == "youtube_search":
+                    query = result.get("query")
+                    if query:
+                        search_youtube(query)
 
-            if intent == "youtube_search":
-                query = result.get("query")
-                if query:
-                    search_youtube(query)
+                elif intent == "google_search":
+                    query = result.get("query")
+                    if query:
+                        search_google(query)
 
-            elif intent == "google_search":
-                query = result.get("query")
-                if query:
-                    search_google(query)
+                elif intent == "whatsapp_message":
+                    contact_name = result.get("contact")
+                    message = result.get("message")
+                    if contact_name and message:
+                        open_whatsapp()
+                        search_contact(contact_name)
+                        send_message(message)
+                        print(f"✅ Sent WhatsApp message to {contact_name}: {message}")
 
-            elif intent == "whatsapp_message":
-                contact_name = result.get("contact")
-                message = result.get("message")
-                if contact_name and message:
-                    open_whatsapp()
-                    search_contact(contact_name)
-                    send_message(message)
-                    print(f"✅ Sent WhatsApp message to {contact_name}: {message}")
+                elif intent == "navigation":
+                    source = result.get("source")
+                    destination = result.get("destination")
+                    if source and destination:
+                        print(f"🗺️ Navigating from {source} to {destination}...")
+                        start_navigation(source, destination)
 
-            elif intent == "navigation":
-                source = result.get("source")
-                destination = result.get("destination")
-                if source and destination:
-                    print(f"🗺️ Navigating from {source} to {destination}...")
-                    start_navigation(source, destination)
+                elif intent == "image_description":
+                    os.system("python imagereg.py")
 
-            elif intent == "image_description":
-                os.system("python imagereg.py")
-            elif intent == "ocr":
-                os.system("python ocr.py")
-            elif intent == "screen":
-                os.system("python screendes.py")
-            elif intent == "detect_obstacles":
-                os.system("python new.py")
-                print("🚧 Obstacle detection feature not implemented.")
+                elif intent == "ocr":
+                    os.system("python ocr.py")
+
+                elif intent == "screen":
+                    os.system("python screendes.py")
+
+                elif intent == "detect_obstacles":
+                    os.system("python new.py")
+                    print("🚧 Obstacle detection feature not implemented.")
+
+                else:
+                    print("⚠️ No valid intent detected.")
             else:
-                print("⚠️ No valid intent detected.")
+                print("⚠️ Failed to analyze the request.")
         else:
-            print("⚠️ Failed to analyze the request.")
+            print("⚠️ No speech detected. Please try again.")
+
+        time.sleep(1)  # Small delay to prevent immediate re-trigger
+
+if __name__ == "__main__":
+    main()

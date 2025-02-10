@@ -5,28 +5,30 @@ import time
 from ultralytics import YOLO
 import google.generativeai as genai
 
+# Configure Gemini API
 GEMINI_API_KEY = "AIzaSyDPwijZg1zvbofMjpdVogd3yABXcwP7Otc"  # Replace with your API key
 genai.configure(api_key=GEMINI_API_KEY)
 
 def expand_image_description(warning):
     prompt = f"""
-    Expand on the following warning message in a line for the navigation of blind people (sometimes instead of cms use meters/feet):
+    Expand on the following warning message in a line for the navigation of blind people 
+    (sometimes instead of cm use meters/feet) mention distance in any one scale:
     Description: "{warning}"
     """
     
     model = genai.GenerativeModel("gemini-pro")
     response = model.generate_content(prompt)
-
+    
     expanded_description = response.text if response.text else "Failed to generate an expanded description."
     print("\n🔹 **Expanded Description:**\n", expanded_description)   
     engine.say(expanded_description)
     engine.runAndWait()
- 
+
 # Initialize text-to-speech engine
 engine = pyttsx3.init()
 engine.setProperty('rate', 150)  # Adjust speaking speed
 
-# Load custom YOLOv8 model
+# Load YOLOv8 model
 model = YOLO("yolov8n.pt")
 
 # Known object widths in cm
@@ -35,8 +37,15 @@ KNOWN_WIDTHS = {
     "truck": 250, "chair": 100, "laptop": 40, "cell phone": 15
 }
 
-FOCAL_LENGTH = 500  # Adjust based on calibration
-CRITICAL_DISTANCE = 50  # Distance threshold in cm
+# Object-Specific Critical Distances
+CRITICAL_DISTANCES = {
+    "person": 50,    # Less than 50 cm
+    "laptop": 40,    # Less than 40 cm
+    "chair": 300,    # Less than 300 cm
+}
+
+GENERAL_CRITICAL_DISTANCE = 100  # Default threshold for unknown objects
+FOCAL_LENGTH = 150  # Adjust based on calibration
 
 cap = cv2.VideoCapture(1)  # Use external camera
 last_update_time = time.time()
@@ -59,7 +68,7 @@ while cap.isOpened():
             confidence = box.conf[0].item()
 
             if label not in KNOWN_WIDTHS:
-                continue
+                continue  # Skip objects without known widths
 
             width_px = x2 - x1  # Bounding box width in pixels
             real_width = KNOWN_WIDTHS[label]  # Actual width in cm
@@ -80,9 +89,14 @@ while cap.isOpened():
         for label, distances in detected_objects.items():
             avg_distance = np.mean(distances)
             distance_results[label] = avg_distance
-            if avg_distance < CRITICAL_DISTANCE:
+
+            # Get object-specific threshold or fallback to general threshold
+            critical_distance = CRITICAL_DISTANCES.get(label, GENERAL_CRITICAL_DISTANCE)
+
+            if avg_distance < critical_distance:
                 warning_msg = f"Warning! {label} is too close: {avg_distance:.2f} cm"
                 warnings.append(warning_msg)
+        
         last_update_time = time.time()
 
     # Announce warnings
