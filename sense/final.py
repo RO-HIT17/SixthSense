@@ -62,7 +62,7 @@ def analyze_text(text):
     - "detect_obstacles" → If the user wants to detect obstacles in a path.
     - "ocr" → If the user wants to extract text from an image (or) identify whats written or whats there.
     - "screen" → If the user wants to know whats on screen.
-    
+    - "spotify" → If the user wants to play music on Spotify.
     **Instructions:**
     - Extract relevant details based on the intent.
     - If intent is unclear, return `"intent": "unknown"`.
@@ -109,8 +109,11 @@ def analyze_text(text):
        ```json
        {{"intent": "screen"}}
        ```
-
-
+    9.User: `"Play Levitating on Spotify"`
+    Output:
+    ```json
+    {{"intent": "spotify", "song": "Levitating"}}
+    ```
     **User Input:** "{text}"
     """
 
@@ -141,6 +144,33 @@ def search_google(query):
     url = f"https://www.google.com/search?q={encoded_query}"
     subprocess.run(["adb", "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url])
     print(f"✅ Opened Google search for: {query}")
+
+import os
+import time
+
+def play_spotify_song(song_name):
+    def adb_command(cmd):
+        os.system(f"adb shell {cmd}")
+
+    adb_command("am start -n com.spotify.music/.MainActivity")
+    time.sleep(5)
+
+    adb_command("input tap 264 1353")
+    time.sleep(2)
+    adb_command("input tap 264 1353")
+
+    adb_command(f'input text "{song_name.replace(" ", "%s")}"')
+    time.sleep(5)
+
+    adb_command("input tap 173 226")
+    time.sleep(5)
+    adb_command("input tap 92 277")
+
+    adb_command("input tap 300 1200")
+
+    print("🎵 Now Playing:", song_name)
+
+
 
 # 📸 Describe Image using Azure CV
 def describe_image(image_path):
@@ -241,6 +271,8 @@ def main():
 
                 elif intent == "screen":
                     os.system("python screendes.py")
+                elif intent == "spotify":
+                    play_spotify_song(result.get("song"))
 
                 elif intent == "detect_obstacles":
                     os.system("python new.py")
