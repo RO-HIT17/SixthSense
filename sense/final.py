@@ -16,7 +16,6 @@ from msrest.authentication import CognitiveServicesCredentials
 GEMINI_API_KEY = "AIzaSyDPwijZg1zvbofMjpdVogd3yABXcwP7Otc"  # Replace with your API key
 genai.configure(api_key=GEMINI_API_KEY)
 
-# 🔹 Azure Credentials
 SPEECH_KEY = "3nF1650hHykjRygiBdmSgJQ8U08bOXEmgGXz8qIFlbya8Wa3UUDzJQQJ99BBACYeBjFXJ3w3AAAYACOGIx0Z"
 SPEECH_REGION = "eastus"
 
@@ -30,10 +29,8 @@ openai.api_key = "2vYQo6xlAVhogi0UI8VeFGAQUylxg1ZUFQPBMlC3wCrLs9Suzf4SJQQJ99BBAC
 openai.api_base = "https://20231-m6xs5g85-swedencentral.openai.azure.com/"
 openai.api_version = "2023-06-01-preview"
 
-# Initialize the Computer Vision Client
 cv_client = ComputerVisionClient(AZURE_ENDPOINT, CognitiveServicesCredentials(AZURE_KEY))
 
-# 🎤 Recognize Speech
 def recognize_speech():
     speech_config = speechsdk.SpeechConfig(subscription=SPEECH_KEY, region=SPEECH_REGION)
     recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config)
@@ -48,7 +45,6 @@ def recognize_speech():
         print("❌ No speech detected.")
         return None
 
-# 🔍 Analyze Text with OpenAI
 def analyze_text(text):
     prompt = f"""
     You are an AI assistant that extracts intents from user queries and returns a structured JSON response.
@@ -153,28 +149,23 @@ def analyze_text(text):
     **User Input:** "{text}"  
     """
 
-    # Initialize the Gemini model
     model = genai.GenerativeModel("gemini-pro")
     
     response = model.generate_content(prompt)
 
     try:
-        # Ensure only JSON is parsed
-        json_str = response.text.strip().strip("```json").strip("```")  # Cleanup formatting issues
-        #print(f"🔮 Gemini Response: {json_str}")
+        json_str = response.text.strip().strip("```json").strip("```") 
         result = json.loads(json_str)
         return result
     except json.JSONDecodeError:
         print("⚠️ Error parsing Gemini response!")
         return {"intent": "unknown"}
-# 📺 Search YouTube
 def search_youtube(query):
     encoded_query = urllib.parse.quote(query)
     url = f"https://www.youtube.com/results?search_query={encoded_query}"
     subprocess.run(["adb", "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url])
     print(f"✅ Opened YouTube search for: {query}")
 
-# 🔎 Search Google
 def search_google(query):
     encoded_query = urllib.parse.quote(query)
     url = f"https://www.google.com/search?q={encoded_query}"
@@ -189,17 +180,13 @@ def book_ticket_on_redbus(source,destination):
     assistant.open_app(app)
     time.sleep(7)  # Wait for the app to open
 
-    # Tap on the search bar (Adjust coordinates as per your device)
     adb_command("input tap 259 370")  
     time.sleep(5)
 
-    # Type the food item
     adb_command(f'input text "{source.replace(" ", "%s")}"')
     time.sleep(2)
 
     
-    #adb_command("input keyevent 66")  
-    #time.sleep(3)
     
     adb_command("input tap 298 438")
     time.sleep(2)
@@ -253,7 +240,6 @@ def play_spotify_song(song_name):
 def adb_command(cmd):
     os.system(f"adb shell {cmd}")
 
-# 📸 Describe Image using Azure CV
 def describe_image(image_path):
     try:
         with open(image_path, "rb") as image_file:
@@ -275,31 +261,24 @@ def order_food_on_zomato(food_item):
     assistant.open_app(app)
     time.sleep(10)  # Wait for the app to open
 
-    # Tap on the search bar (Adjust coordinates as per your device)
     adb_command("input tap 159 228")  
     time.sleep(2)
 
-    # Type the food item
     adb_command(f'input text "{food_item.replace(" ", "%s")}"')
     time.sleep(5)
 
-    # Press Enter to search
     adb_command("input keyevent 66")  
     time.sleep(5)
 
-    # Tap on the first search result (Modify coordinates if needed)
     adb_command("input tap 167 350")
     time.sleep(5)
 
-    # Tap on 'Add to Cart' (Modify coordinates if needed)
     adb_command("input tap 118 900")
     time.sleep(5)
 
-    # Tap on 'Proceed to Checkout' (Modify coordinates if needed)
     adb_command("input tap 530 719")
     time.sleep(4)
     adb_command("input tap 520 702")
-    # Confirm order (Modify coordinates if needed)
     adb_command("input tap 492 1321")
     time.sleep(4)
     adb_command("input tap 492 1321")
@@ -309,40 +288,33 @@ def order_food_on_zomato(food_item):
 
     print(f"✅ Ordered {food_item} on Zomato!")
 
-# Call the function with the food item you want to order
-
-# 📩 Open WhatsApp and Send Message
 def open_whatsapp():
     subprocess.run(["adb", "shell", "am", "start", "-n", "com.whatsapp/.HomeActivity"])
     time.sleep(2)
 
 def search_contact(contact_name):
-    subprocess.run(["adb", "shell", "input", "tap", "900", "200"])  # Tap search bar
+    subprocess.run(["adb", "shell", "input", "tap", "900", "200"])  
     time.sleep(1)
     
     formatted_name = contact_name.replace(" ", "%s")
     subprocess.run(["adb", "shell", "input", "text", formatted_name])
     time.sleep(2)
 
-    subprocess.run(["adb", "shell", "input", "tap", "300", "400"])  # Select contact
+    subprocess.run(["adb", "shell", "input", "tap", "300", "400"])  
     time.sleep(2)
 def book_ride_on_rapido(destination):
     assistant = SmartAndroidAssistant()
     app = "rapido"
     assistant.open_app(app)
-    time.sleep(10)  # Wait for the app to open
+    time.sleep(10)  
 
-    # Tap on the search bar (Adjust coordinates as per your device)
     adb_command("input tap 211 106")  
     time.sleep(5)
 
-    # Type the food item
     adb_command(f'input text "{destination.replace(" ", "%s")}"')
     time.sleep(5)
 
     
-    #adb_command("input keyevent 66")  
-    #time.sleep(3)
     
     adb_command("input tap 152 501")
     time.sleep(4)
@@ -359,7 +331,7 @@ def insta():
     assistant = SmartAndroidAssistant()
     app = "instagram"
     assistant.open_app(app)
-    time.sleep(5)  # Wait for the app to open
+    time.sleep(5)  
 
     adb_command(f"input tap 128 274")
     time.sleep(3)
@@ -374,30 +346,28 @@ def insta():
     adb_command(f"input swipe 666 1371 666 1371")
     time.sleep(3)
 
-# Function to run ADB command
 def run_adb_command(command):
     result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode != 0:
         print(f"Error running command: {result.stderr.decode()}")
     return result.stdout.decode()
 
-# Step 1: Open WhatsApp contact/chat
 def search_contact(contact_name):
-    subprocess.run(["adb", "shell", "input", "tap", "900", "200"])  # Tap search bar (adjust coordinates if needed)
+    subprocess.run(["adb", "shell", "input", "tap", "900", "200"])  
     time.sleep(1)
     
-    formatted_name = contact_name.replace(" ", "%s")  # Handle spaces for ADB input
+    formatted_name = contact_name.replace(" ", "%s")  
     subprocess.run(["adb", "shell", "input", "text", formatted_name])
     time.sleep(2)
 
-    subprocess.run(["adb", "shell", "input", "tap", "300", "400"])  # Adjust if needed
+    subprocess.run(["adb", "shell", "input", "tap", "300", "400"])  
     time.sleep(2)
 
 def tap_microphone_button(duration):
     x=duration*1000
-    command = f"adb shell input swipe 666 1371 666 1371 10000"  # Replace with your actual coordinates
+    command = f"adb shell input swipe 666 1371 666 1371 10000"  
     run_adb_command(command)
-    time.sleep(5)  # Wait for the microphone to start recording
+    time.sleep(5)  
 
 def send_voice_message(contact_number,duration):
     print("📱 Opening WhatsApp...")
@@ -438,7 +408,7 @@ def main():
         if text:
             if text.lower().strip() in ["exit", "quit"]:
                 print("👋 Exiting program. Goodbye!")
-                break  # Exit the loop
+                break  
             
             result = analyze_text(text)
             
@@ -514,7 +484,7 @@ def main():
         else:
             print("⚠️ No speech detected. Please try again.")
 
-        time.sleep(1)  # Small delay to prevent immediate re-trigger
+        time.sleep(1)  
 
 if __name__ == "__main__":
     main()
