@@ -65,6 +65,7 @@ def analyze_text(text):
     - "spotify" → If the user wants to play music on Spotify.
     - "zomato" → If the user wants to order food on Zomato.
     - "rapido" → If the user wants to book a ride on Rapido.
+    - "redbus" → If the user wants to book a ticket on Redbus.
     **Instructions:**
     - Extract relevant details based on the intent.
     - If intent is unclear, return `"intent": "unknown"`.
@@ -126,8 +127,12 @@ def analyze_text(text):
     ```json
     {{"intent": "rapido", "destination": "Guindy"}}
     ```
-    **User Input:** "{text}"
-    
+    12.User: `"Book a ticket from Chennai to Bangalore on Redbus"`
+    Output:
+    ```json
+    {{"intent": "redbus", "source": "Chennai", "destination": "Bangalore"}}
+    ```
+    **User Input:** "{text}"  
     """
 
     # Initialize the Gemini model
@@ -160,6 +165,49 @@ def search_google(query):
 
 import os
 import time
+def book_ticket_on_redbus(source,destination):
+    assistant = SmartAndroidAssistant()
+    app = "redbus"
+    assistant.open_app(app)
+    time.sleep(6)  # Wait for the app to open
+
+    # Tap on the search bar (Adjust coordinates as per your device)
+    adb_command("input tap 259 370")  
+    time.sleep(5)
+
+    # Type the food item
+    adb_command(f'input text "{source.replace(" ", "%s")}"')
+    time.sleep(2)
+
+    
+    #adb_command("input keyevent 66")  
+    #time.sleep(3)
+    
+    adb_command("input tap 298 438")
+    time.sleep(2)
+    
+    adb_command("input tap 247 547")
+    time.sleep(2)
+    
+    
+    adb_command(f'input text "{destination.replace(" ", "%s")}"')
+    time.sleep(2)
+
+    adb_command("input tap 298 438")
+    time.sleep(2)
+    
+    adb_command("input tap 297 872")
+    time.sleep(2)
+    
+    adb_command("input tap 274 938")
+    time.sleep(2)
+    
+    adb_command("input tap 287 658")
+    time.sleep(2)
+    
+    adb_command("input tap 287 658")
+    time.sleep(2)
+
 
 def play_spotify_song(song_name):
     def adb_command(cmd):
@@ -358,6 +406,11 @@ def main():
                     destination = result.get("destination")
                     if destination:
                         book_ride_on_rapido(destination)
+                elif intent == "redbus":
+                    source = result.get("source")
+                    destination = result.get("destination")
+                    if source and destination:
+                        book_ticket_on_redbus(source, destination)
                 else:
                     print("⚠️ No valid intent detected.")
             else:
