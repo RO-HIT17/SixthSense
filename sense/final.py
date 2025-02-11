@@ -67,6 +67,7 @@ def analyze_text(text):
     - "rapido" → If the user wants to book a ride on Rapido.
     - "redbus" → If the user wants to book a ticket on Redbus.
     - "unread" → If the user wants to check unread messages on WhatsApp.
+    - "insta" → If the user wants to upload Instagram Story.
     **Instructions:**
     - Extract relevant details based on the intent.
     - If intent is unclear, return `"intent": "unknown"`.
@@ -138,6 +139,12 @@ def analyze_text(text):
     ```json
     {{"intent": "unread"}}
     ```
+    14.User: `"Upload a story on Instagram"`
+    Output:
+    ```json
+    {{"intent": "insta"}}
+    ```
+    
     **User Input:** "{text}"  
     """
 
@@ -313,7 +320,7 @@ def book_ride_on_rapido(destination):
     assistant = SmartAndroidAssistant()
     app = "rapido"
     assistant.open_app(app)
-    time.sleep(6)  # Wait for the app to open
+    time.sleep(10)  # Wait for the app to open
 
     # Tap on the search bar (Adjust coordinates as per your device)
     adb_command("input tap 211 106")  
@@ -330,6 +337,18 @@ def book_ride_on_rapido(destination):
     adb_command("input tap 152 501")
     time.sleep(2)
     adb_command("input tap 300 1125")
+    time.sleep(2)
+def insta():
+    assistant = SmartAndroidAssistant()
+    app = "instagram"
+    assistant.open_app(app)
+    time.sleep(5)  # Wait for the app to open
+
+    adb_command(f"input tap 128 274")
+    time.sleep(2)
+    adb_command(f"input tap 79 575")
+    time.sleep(2)
+    adb_command(f"input tap 315 1122")
     time.sleep(2)
 
 def send_message(message):
@@ -405,7 +424,8 @@ def main():
                     os.system("python wpmsg.py")
                 elif intent == "spotify":
                     play_spotify_song(result.get("song"))
-
+                elif intent == "insta":
+                    insta()
                 elif intent == "detect_obstacles":
                     os.system("python new.py")
                     print("🚧 Obstacle detection feature not implemented.")
