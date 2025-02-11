@@ -169,7 +169,7 @@ def book_ticket_on_redbus(source,destination):
     assistant = SmartAndroidAssistant()
     app = "redbus"
     assistant.open_app(app)
-    time.sleep(6)  # Wait for the app to open
+    time.sleep(7)  # Wait for the app to open
 
     # Tap on the search bar (Adjust coordinates as per your device)
     adb_command("input tap 259 370")  
@@ -255,7 +255,7 @@ def order_food_on_zomato(food_item):
     assistant = SmartAndroidAssistant()
     app = "zomato"
     assistant.open_app(app)
-    time.sleep(6)  # Wait for the app to open
+    time.sleep(10)  # Wait for the app to open
 
     # Tap on the search bar (Adjust coordinates as per your device)
     adb_command("input tap 159 228")  
