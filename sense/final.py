@@ -8,7 +8,7 @@ import time
 import os
 import io
 import google.generativeai as genai
-
+from opener import SmartAndroidAssistant
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
 from msrest.authentication import CognitiveServicesCredentials
@@ -63,6 +63,8 @@ def analyze_text(text):
     - "ocr" → If the user wants to extract text from an image (or) identify whats written or whats there.
     - "screen" → If the user wants to know whats on screen.
     - "spotify" → If the user wants to play music on Spotify.
+    - "zomato" → If the user wants to order food on Zomato.
+    - "rapido" → If the user wants to book a ride on Rapido.
     **Instructions:**
     - Extract relevant details based on the intent.
     - If intent is unclear, return `"intent": "unknown"`.
@@ -114,7 +116,18 @@ def analyze_text(text):
     ```json
     {{"intent": "spotify", "song": "Levitating"}}
     ```
+    10.User: `"Order a pizza on Zomato"`
+    Output:
+    ```json
+    {{"intent": "zomato", "food_item": "pizza"}}
+    ```
+    11.User: `"Book a ride to Guindy on Rapido"`
+    Output:
+    ```json
+    {{"intent": "rapido", "destination": "Guindy"}}
+    ```
     **User Input:** "{text}"
+    
     """
 
     # Initialize the Gemini model
@@ -171,6 +184,8 @@ def play_spotify_song(song_name):
     print("🎵 Now Playing:", song_name)
 
 
+def adb_command(cmd):
+    os.system(f"adb shell {cmd}")
 
 # 📸 Describe Image using Azure CV
 def describe_image(image_path):
@@ -188,6 +203,42 @@ def describe_image(image_path):
             print("⚠️ No description found.")
     except Exception as e:
         print(f"⚠️ Error describing image: {e}")
+def order_food_on_zomato(food_item):
+    assistant = SmartAndroidAssistant()
+    app = "zomato"
+    assistant.open_app(app)
+    time.sleep(6)  # Wait for the app to open
+
+    # Tap on the search bar (Adjust coordinates as per your device)
+    adb_command("input tap 159 228")  
+    time.sleep(2)
+
+    # Type the food item
+    adb_command(f'input text "{food_item.replace(" ", "%s")}"')
+    time.sleep(2)
+
+    # Press Enter to search
+    adb_command("input keyevent 66")  
+    time.sleep(3)
+
+    # Tap on the first search result (Modify coordinates if needed)
+    adb_command("input tap 167 350")
+    time.sleep(3)
+
+    # Tap on 'Add to Cart' (Modify coordinates if needed)
+    adb_command("input tap 118 900")
+    time.sleep(2)
+
+    # Tap on 'Proceed to Checkout' (Modify coordinates if needed)
+    adb_command("input tap 530 719")
+    time.sleep(2)
+    adb_command("input tap 520 702")
+    # Confirm order (Modify coordinates if needed)
+    adb_command("input tap 492 1321")
+    adb_command("input tap 492 1321")
+    print(f"✅ Ordered {food_item} on Zomato!")
+
+# Call the function with the food item you want to order
 
 # 📩 Open WhatsApp and Send Message
 def open_whatsapp():
@@ -203,6 +254,28 @@ def search_contact(contact_name):
     time.sleep(2)
 
     subprocess.run(["adb", "shell", "input", "tap", "300", "400"])  # Select contact
+    time.sleep(2)
+def book_ride_on_rapido(destination):
+    assistant = SmartAndroidAssistant()
+    app = "rapido"
+    assistant.open_app(app)
+    time.sleep(6)  # Wait for the app to open
+
+    # Tap on the search bar (Adjust coordinates as per your device)
+    adb_command("input tap 211 106")  
+    time.sleep(5)
+
+    # Type the food item
+    adb_command(f'input text "{destination.replace(" ", "%s")}"')
+    time.sleep(2)
+
+    
+    #adb_command("input keyevent 66")  
+    #time.sleep(3)
+    
+    adb_command("input tap 152 501")
+    time.sleep(2)
+    adb_command("input tap 300 1125")
     time.sleep(2)
 
 def send_message(message):
@@ -277,7 +350,14 @@ def main():
                 elif intent == "detect_obstacles":
                     os.system("python new.py")
                     print("🚧 Obstacle detection feature not implemented.")
-
+                elif intent == "zomato":
+                    food_item = result.get("food_item")
+                    if food_item:
+                        order_food_on_zomato(food_item)
+                elif intent == "rapido":
+                    destination = result.get("destination")
+                    if destination:
+                        book_ride_on_rapido(destination)
                 else:
                     print("⚠️ No valid intent detected.")
             else:
