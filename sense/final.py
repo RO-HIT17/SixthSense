@@ -345,11 +345,11 @@ def insta():
     time.sleep(5)  # Wait for the app to open
 
     adb_command(f"input tap 128 274")
-    time.sleep(2)
+    time.sleep(3)
     adb_command(f"input tap 79 575")
-    time.sleep(2)
+    time.sleep(3)
     adb_command(f"input tap 315 1122")
-    time.sleep(2)
+    time.sleep(3)
 
 def send_message(message):
     formatted_msg = message.replace(" ", "%s")
