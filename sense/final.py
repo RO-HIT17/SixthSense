@@ -66,6 +66,7 @@ def analyze_text(text):
     - "zomato" → If the user wants to order food on Zomato.
     - "rapido" → If the user wants to book a ride on Rapido.
     - "redbus" → If the user wants to book a ticket on Redbus.
+    - "unread" → If the user wants to check unread messages on WhatsApp.
     **Instructions:**
     - Extract relevant details based on the intent.
     - If intent is unclear, return `"intent": "unknown"`.
@@ -131,6 +132,11 @@ def analyze_text(text):
     Output:
     ```json
     {{"intent": "redbus", "source": "Chennai", "destination": "Bangalore"}}
+    ```
+    13.User: `"Check unread messages on WhatsApp"`
+    Output:
+    ```json
+    {{"intent": "unread"}}
     ```
     **User Input:** "{text}"  
     """
@@ -392,6 +398,11 @@ def main():
 
                 elif intent == "screen":
                     os.system("python screendes.py")
+                elif intent == "screen":
+                    os.system("python screendes.py")
+                elif intent == "unread":
+                    open_whatsapp()
+                    os.system("python wpmsg.py")
                 elif intent == "spotify":
                     play_spotify_song(result.get("song"))
 
