@@ -281,27 +281,32 @@ def order_food_on_zomato(food_item):
 
     # Type the food item
     adb_command(f'input text "{food_item.replace(" ", "%s")}"')
-    time.sleep(2)
+    time.sleep(5)
 
     # Press Enter to search
     adb_command("input keyevent 66")  
-    time.sleep(3)
+    time.sleep(5)
 
     # Tap on the first search result (Modify coordinates if needed)
     adb_command("input tap 167 350")
-    time.sleep(3)
+    time.sleep(5)
 
     # Tap on 'Add to Cart' (Modify coordinates if needed)
     adb_command("input tap 118 900")
-    time.sleep(2)
+    time.sleep(5)
 
     # Tap on 'Proceed to Checkout' (Modify coordinates if needed)
     adb_command("input tap 530 719")
-    time.sleep(2)
+    time.sleep(4)
     adb_command("input tap 520 702")
     # Confirm order (Modify coordinates if needed)
     adb_command("input tap 492 1321")
+    time.sleep(4)
     adb_command("input tap 492 1321")
+    time.sleep(4)
+    adb_command(f"input swipe 666 1371 666 1371")
+    time.sleep(4)
+
     print(f"✅ Ordered {food_item} on Zomato!")
 
 # Call the function with the food item you want to order
@@ -343,6 +348,13 @@ def book_ride_on_rapido(destination):
     time.sleep(4)
     adb_command("input tap 300 1125")
     time.sleep(4)
+    
+    adb_command(f"input swipe 666 1371 666 1371")
+    time.sleep(3)
+    adb_command(f"input swipe 666 1371 666 1371")
+    time.sleep(3)
+
+
 def insta():
     assistant = SmartAndroidAssistant()
     app = "instagram"
@@ -354,6 +366,12 @@ def insta():
     adb_command(f"input tap 79 575")
     time.sleep(3)
     adb_command(f"input tap 315 1122")
+    time.sleep(3)
+    adb_command(f"input swipe 666 1371 666 1371")
+    time.sleep(3)
+    adb_command(f"input swipe 666 1371 666 1371")
+    time.sleep(3)
+    adb_command(f"input swipe 666 1371 666 1371")
     time.sleep(3)
 
 # Function to run ADB command
