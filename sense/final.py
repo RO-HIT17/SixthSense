@@ -68,6 +68,7 @@ def analyze_text(text):
     - "redbus" → If the user wants to book a ticket on Redbus.
     - "unread" → If the user wants to check unread messages on WhatsApp.
     - "insta" → If the user wants to upload Instagram Story.
+    - "voice" → If the user wants to send a voice message on WhatsApp.
     **Instructions:**
     - Extract relevant details based on the intent.
     - If intent is unclear, return `"intent": "unknown"`.
@@ -144,7 +145,11 @@ def analyze_text(text):
     ```json
     {{"intent": "insta"}}
     ```
-    
+    15.User: `"Send a voice message to Vijay Krishna for 10 seconds"`
+    Output:
+    ```json
+    {{"intent": "voice", "contact": "Vijay Krishna", "duration": "10"}}
+    ```
     **User Input:** "{text}"  
     """
 
@@ -351,6 +356,45 @@ def insta():
     adb_command(f"input tap 315 1122")
     time.sleep(3)
 
+# Function to run ADB command
+def run_adb_command(command):
+    result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode != 0:
+        print(f"Error running command: {result.stderr.decode()}")
+    return result.stdout.decode()
+
+# Step 1: Open WhatsApp contact/chat
+def search_contact(contact_name):
+    subprocess.run(["adb", "shell", "input", "tap", "900", "200"])  # Tap search bar (adjust coordinates if needed)
+    time.sleep(1)
+    
+    formatted_name = contact_name.replace(" ", "%s")  # Handle spaces for ADB input
+    subprocess.run(["adb", "shell", "input", "text", formatted_name])
+    time.sleep(2)
+
+    subprocess.run(["adb", "shell", "input", "tap", "300", "400"])  # Adjust if needed
+    time.sleep(2)
+
+def tap_microphone_button(duration):
+    x=duration*1000
+    command = f"adb shell input swipe 666 1371 666 1371 10000"  # Replace with your actual coordinates
+    run_adb_command(command)
+    time.sleep(5)  # Wait for the microphone to start recording
+
+def send_voice_message(contact_number,duration):
+    print("📱 Opening WhatsApp...")
+    """Launch WhatsApp."""
+    subprocess.run(["adb", "shell", "am", "start", "-n", "com.whatsapp/.HomeActivity"])
+    time.sleep(2)  
+
+    search_contact(contact_number)
+    
+    print("🎤 Recording voice message...")
+    tap_microphone_button(duration)
+    
+    print("✅ Voice message sent successfully!")
+
+
 def send_message(message):
     formatted_msg = message.replace(" ", "%s")
     subprocess.run(["adb", "shell", "input", "text", formatted_msg])
@@ -392,7 +436,10 @@ def main():
                     query = result.get("query")
                     if query:
                         search_google(query)
-
+                elif intent == "voice":
+                    contact_name = result.get("contact")
+                    duration = result.get("duration")
+                    send_voice_message(contact_name,duration)
                 elif intent == "whatsapp_message":
                     contact_name = result.get("contact")
                     message = result.get("message")
