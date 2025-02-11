@@ -6,7 +6,7 @@ def adb_command(cmd):
 
 def book_ride_on_rapido(destination):
     assistant = SmartAndroidAssistant()
-    app = "redbus"
+    app = "rapido"
     assistant.open_app(app)
     time.sleep(6)  # Wait for the app to open
 
@@ -23,9 +23,9 @@ def book_ride_on_rapido(destination):
     #time.sleep(3)
     
     adb_command("input tap 152 501")
-    #time.sleep(2)
+    time.sleep(5)
     adb_command("input tap 300 1125")
-    time.sleep(2)
+    time.sleep(5)
     # Tap on 'Proceed to Checkout' (Modify coordinates if needed)
     #adb_command("input tap 306 1134")
     #time.sleep(2)

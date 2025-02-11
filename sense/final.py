@@ -156,7 +156,7 @@ def analyze_text(text):
     try:
         # Ensure only JSON is parsed
         json_str = response.text.strip().strip("```json").strip("```")  # Cleanup formatting issues
-        print(f"🔮 Gemini Response: {json_str}")
+        #print(f"🔮 Gemini Response: {json_str}")
         result = json.loads(json_str)
         return result
     except json.JSONDecodeError:
@@ -328,16 +328,16 @@ def book_ride_on_rapido(destination):
 
     # Type the food item
     adb_command(f'input text "{destination.replace(" ", "%s")}"')
-    time.sleep(2)
+    time.sleep(5)
 
     
     #adb_command("input keyevent 66")  
     #time.sleep(3)
     
     adb_command("input tap 152 501")
-    time.sleep(2)
+    time.sleep(4)
     adb_command("input tap 300 1125")
-    time.sleep(2)
+    time.sleep(4)
 def insta():
     assistant = SmartAndroidAssistant()
     app = "instagram"

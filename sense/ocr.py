@@ -57,7 +57,8 @@ extracted_text = ""
 if result.status == OperationStatusCodes.succeeded:
     for page in result.analyze_result.read_results:
         for line in page.lines:
-            extracted_text += line.text + " "
+            if line.text!="iVCam":
+                extracted_text += line.text + " "
     print("\n📖 Extracted Text:\n", extracted_text)
 
     # 🗣️ Speak the Extracted Text
