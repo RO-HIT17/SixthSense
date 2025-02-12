@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import time
 import pyttsx3
-# Load YOLO Model
 yolo_net = cv2.dnn.readNet("yolov3.weights", "yolov3.cfg")
 layer_names = yolo_net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
@@ -10,7 +9,6 @@ output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
 engine = pyttsx3.init()
 engine.setProperty("rate", 150) 
 
-# Define classes and real-world widths (in cm)
 classes = [
     "person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
     "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", 
@@ -42,28 +40,23 @@ KNOWN_WIDTHS = {
     "toothbrush": 20
 }
 
-# Focal length (calibrated for a Dell laptop webcam)
-FOCAL_LENGTH = 500  # Approximate value, should be calibrated for accuracy
+FOCAL_LENGTH = 500  
 
-# Start Webcam
 cap = cv2.VideoCapture(0)
 
-# Timer setup
 last_update_time = time.time()
-distance_results = {}  # Stores the last calculated distance
+distance_results = {}  
 
 while True:
     ret, frame = cap.read()
     height, width, _ = frame.shape
 
-    # Convert image to YOLO format
     blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), swapRB=True, crop=False)
     yolo_net.setInput(blob)
     detections = yolo_net.forward(output_layers)
 
-    detected_objects = []
+    detected_objects = {}
 
-    # Process detections
     for detection in detections:
         for obj in detection:
             scores = obj[5:]
@@ -71,7 +64,10 @@ while True:
             confidence = scores[class_id]
 
             if confidence > 0.5:
-                # Get bounding box
+                label = classes[class_id] if class_id < len(classes) else "unknown"
+                if label not in KNOWN_WIDTHS:
+                    continue  
+
                 center_x, center_y, w, h = (
                     int(obj[0] * width),
                     int(obj[1] * height),
@@ -81,42 +77,43 @@ while True:
                 x = int(center_x - w / 2)
                 y = int(center_y - h / 2)
 
-                # Distance Calculation
-                label = list(KNOWN_WIDTHS.keys())[class_id]
-                if label in KNOWN_WIDTHS:
+                if label not in detected_objects:
+                    detected_objects[label] = {"x": [], "y": [], "w": [], "h": [], "distances": []}
+
+                detected_objects[label]["x"].append(x)
+                detected_objects[label]["y"].append(y)
+                detected_objects[label]["w"].append(w)
+                detected_objects[label]["h"].append(h)
+
+                if time.time() - last_update_time >= 10:
                     real_width = KNOWN_WIDTHS[label]
-                    distance = (real_width * FOCAL_LENGTH) / w  # w = detected width in pixels
-                    distance_results[label] = distance
-                    detected_objects.append((label, distance))
+                    distance = (real_width * FOCAL_LENGTH) / w
+                    detected_objects[label]["distances"].append(distance)
 
-                # Draw bounding box and label
-                distance_text = f"{label}: {distance_results.get(label, 'Calculating...'):.2f} cm"
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                cv2.putText(frame, distance_text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+    if time.time() - last_update_time >= 5:
+        for label, data in detected_objects.items():
+            if data["distances"]:
+                avg_distance = np.mean(data["distances"])
+                distance_results[label] = avg_distance  
+        last_update_time = time.time()  
 
-    # Alert User Every 10 Seconds
-    current_time = time.time()
-    if current_time - last_update_time > 10 and detected_objects:
-        alert_message = []
-        for obj, dist in detected_objects:
-            if dist < 50:  # Too close warning
-                alert_message.append(f"Warning! {obj} is very close! {dist:.2f} cm away.")
-            else:
-                alert_message.append(f"{obj} detected at {dist:.2f} cm.")
-        
-        # Speak the alerts
-        if alert_message:
-            alert_text = " ".join(alert_message)
-            print("Voice Alert:", alert_text)  # Debugging
-            engine.say(alert_text)
-            engine.runAndWait()
+    for label, data in detected_objects.items():
+        avg_x = int(np.mean(data["x"]))
+        avg_y = int(np.mean(data["y"]))
+        avg_w = int(np.mean(data["w"]))
+        avg_h = int(np.mean(data["h"]))
 
-        last_alert_time = current_time  # Reset timer
+        cv2.rectangle(frame, (avg_x, avg_y), (avg_x + avg_w, avg_y + avg_h), (0, 255, 0), 2)
 
-    # Show Output
-    cv2.imshow("Object Detection with Distance & Voice Alert", frame)
-    
-    # Press 'q' to exit
+        distance_value = distance_results.get(label, None)
+        if distance_value is not None:
+            distance_text = f"{label}: {distance_value:.2f} cm"
+        else:
+            distance_text = f"{label}: Calculating..."
+        cv2.putText(frame, distance_text, (avg_x, avg_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+    cv2.imshow("YOLO Object Detection with Distance Measurement", frame)
+
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 

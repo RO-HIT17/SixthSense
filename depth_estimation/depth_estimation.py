@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 
-# Load YOLO model
 yolo_net = cv2.dnn.readNet("yolov3.weights", "yolov3.cfg")
 layer_names = yolo_net.getLayerNames()
 output_layers = [layer_names[i-1] for i in yolo_net.getUnconnectedOutLayers()]
@@ -9,10 +8,9 @@ output_layers = [layer_names[i-1] for i in yolo_net.getUnconnectedOutLayers()]
 with open("coco.names", "r") as f:
     classes = [line.strip() for line in f.readlines()]
 
-# Camera Calibration (Example: Adjust values based on real measurements)
-KNOWN_DISTANCE = 50  # cm (distance from camera to object in real world)
-KNOWN_WIDTH = 20     # cm (real width of object)
-FOCAL_LENGTH = 500   # Needs calibration
+KNOWN_DISTANCE = 50  
+KNOWN_WIDTH = 20     
+FOCAL_LENGTH = 500   
 
 def calculate_focal_length(known_distance, real_width, width_in_pixels):
     return (width_in_pixels * known_distance) / real_width
@@ -20,7 +18,6 @@ def calculate_focal_length(known_distance, real_width, width_in_pixels):
 def estimate_distance(focal_length, real_width, width_in_pixels):
     return (real_width * focal_length) / width_in_pixels
 
-# Capture Video
 cap = cv2.VideoCapture(0)
 
 while True:
@@ -65,10 +62,8 @@ while True:
             confidence = confidences[i]
             color = (0, 255, 0)
 
-            # Distance Calculation
             distance = estimate_distance(FOCAL_LENGTH, KNOWN_WIDTH, w)
             
-            # Draw Bounding Box and Distance
             cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
             cv2.putText(frame, f"{label} {confidence:.2f}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
             cv2.putText(frame, f"Distance: {distance:.2f} cm", (x, y + h + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)

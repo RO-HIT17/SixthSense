@@ -13,17 +13,14 @@
         const remoteVideo = document.getElementById("remoteVideo");
 
         async function startWebRTC() {
-            const socket = io.connect("http://192.168.X.X:5000");  // Flask Server IP
+            const socket = io.connect("http://192.168.X.X:5000");  
             const pc = new RTCPeerConnection();
 
-            // Get video stream from mobile camera
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             localVideo.srcObject = stream;
 
-            // Send camera stream to server
             stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-            // Create WebRTC offer
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
 

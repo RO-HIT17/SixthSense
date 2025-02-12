@@ -14,7 +14,7 @@ relay = MediaRelay()
 
 @app.route("/")
 def index():
-    return render_template("index.html")  # Loads frontend WebRTC page
+    return render_template("index.html")  
 
 class VideoTrack(VideoStreamTrack):
     def __init__(self, track):
@@ -25,14 +25,11 @@ class VideoTrack(VideoStreamTrack):
         frame = await self.track.recv()
         img = frame.to_ndarray(format="bgr24")
 
-        # Convert to grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        obstacles = cv2.Canny(gray, 50, 150)  # Example edge detection
+        obstacles = cv2.Canny(gray, 50, 150)  
 
-        # Convert back to BGR
-        img[obstacles > 0] = [0, 255, 0]  # Highlight obstacles in green
+        img[obstacles > 0] = [0, 255, 0]  
 
-        # Encode back to video frame
         new_frame = av.VideoFrame.from_ndarray(img, format="bgr24")
         return new_frame
 
@@ -41,7 +38,6 @@ async def handle_offer(data):
     offer = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
     await pc.setRemoteDescription(offer)
     
-    # Process video stream
     for track in pc.getReceivers():
         if track.kind == "video":
             pc.addTrack(VideoTrack(track))

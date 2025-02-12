@@ -4,11 +4,9 @@ import numpy as np
 from torchvision import transforms
 from timm.models.vision_transformer import vit_base_patch16_224
 
-# Load MiDaS model
 model = torch.hub.load("intel-isl/MiDaS", "MiDaS_small")
 model.eval()
 
-# Preprocess image
 def preprocess(img):
     transform = transforms.Compose([
         transforms.Resize((384, 384)),
@@ -16,14 +14,12 @@ def preprocess(img):
     ])
     return transform(img).unsqueeze(0)
 
-# Estimate depth
 def estimate_depth(image):
     input_img = preprocess(image)
     with torch.no_grad():
         depth_map = model(input_img)
     return depth_map.squeeze().numpy()
 
-# Capture frame and estimate depth
 cap = cv2.VideoCapture(0)
 while True:
     ret, frame = cap.read()

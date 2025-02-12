@@ -1,7 +1,6 @@
 import cv2
 from ultralytics import YOLO
 
-# Load custom YOLO model
 model = YOLO("yolov8n.pt")
 cap = cv2.VideoCapture(1)
 
@@ -10,10 +9,8 @@ while cap.isOpened():
     if not ret:
         break
 
-    # Perform object detection
     results = model(frame)
 
-    # Draw bounding boxes on frame
     for result in results:
         for box in result.boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0])

@@ -1,27 +1,17 @@
 import cv2
 import numpy as np
+import pyttsx3
 import time
-# Load YOLO Model
-yolo_net = cv2.dnn.readNet("yolov3.weights", "yolov3.cfg")
+
+engine = pyttsx3.init()
+engine.setProperty('rate', 150)  
+
+yolo_net = cv2.dnn.readNet("C:\Rohit\Projects\SixthSense\model\yolov3.weights", "C:\Rohit\Projects\SixthSense\model\yolov3.cfg")
 layer_names = yolo_net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
 
-engine = pyttsx3.init()
-engine.setProperty("rate", 150) 
-
-# Define classes and real-world widths (in cm)
-classes = [
-    "person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
-    "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", 
-    "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", 
-    "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball",
-    "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", 
-    "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", 
-    "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
-    "sofa", "pottedplant", "bed", "diningtable", "toilet", "tvmonitor", "laptop", "mouse", 
-    "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
-    "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
-]
+with open("C:\Rohit\Projects\SixthSense\model\coco.names", "r") as f:
+    classes = [line.strip() for line in f.readlines()]
 
 KNOWN_WIDTHS = {
     "person": 40, "bicycle": 65, "car": 150, "motorbike": 70, "aeroplane": 500, "bus": 250, 
@@ -41,28 +31,25 @@ KNOWN_WIDTHS = {
     "toothbrush": 20
 }
 
-# Focal length (calibrated for a Dell laptop webcam)
-FOCAL_LENGTH = 500  # Approximate value, should be calibrated for accuracy
+FOCAL_LENGTH = 500
+CRITICAL_DISTANCE = 50
 
-# Start Webcam
-cap = cv2.VideoCapture(0)
+mobile_camera_url = "http://192.168.29.67:8080/video"
 
-# Timer setup
+cap = cv2.VideoCapture(1)
 last_update_time = time.time()
-distance_results = {}  # Stores the last calculated distance
+distance_results = {}
 
 while True:
     ret, frame = cap.read()
     height, width, _ = frame.shape
-
-    # Convert image to YOLO format
     blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), swapRB=True, crop=False)
     yolo_net.setInput(blob)
     detections = yolo_net.forward(output_layers)
 
     detected_objects = {}
+    warning_message = ""
 
-    # Process detections
     for detection in detections:
         for obj in detection:
             scores = obj[5:]
@@ -72,19 +59,15 @@ while True:
             if confidence > 0.5:
                 label = classes[class_id] if class_id < len(classes) else "unknown"
                 if label not in KNOWN_WIDTHS:
-                    continue  # Ignore unknown objects
+                    continue
 
-                # Get bounding box dimensions
                 center_x, center_y, w, h = (
-                    int(obj[0] * width),
-                    int(obj[1] * height),
-                    int(obj[2] * width),
-                    int(obj[3] * height),
+                    int(obj[0] * width), int(obj[1] * height),
+                    int(obj[2] * width), int(obj[3] * height)
                 )
                 x = int(center_x - w / 2)
                 y = int(center_y - h / 2)
 
-                # Store detected objects for averaging
                 if label not in detected_objects:
                     detected_objects[label] = {"x": [], "y": [], "w": [], "h": [], "distances": []}
 
@@ -93,39 +76,39 @@ while True:
                 detected_objects[label]["w"].append(w)
                 detected_objects[label]["h"].append(h)
 
-                # Calculate distance (only update every 10 seconds)
-                if time.time() - last_update_time >= 10:
+                if time.time() - last_update_time >= 5:
                     real_width = KNOWN_WIDTHS[label]
                     distance = (real_width * FOCAL_LENGTH) / w
                     detected_objects[label]["distances"].append(distance)
-
-    # If 10 seconds passed, update distances and reset timer
-    if time.time() - last_update_time >= 5:
+    alt=[]
+    if time.time() - last_update_time >= 10:
         for label, data in detected_objects.items():
+            
             if data["distances"]:
                 avg_distance = np.mean(data["distances"])
-                distance_results[label] = avg_distance  # Store the calculated distance
-        last_update_time = time.time()  # Reset timer
+                distance_results[label] = avg_distance
+                if avg_distance < CRITICAL_DISTANCE:
+                    warning_message = f"Warning! {label} is too close: {avg_distance:.2f} cm"
+                    alt.append(warning_message)
+        last_update_time = time.time()
 
-    # Draw bounding boxes
     for label, data in detected_objects.items():
         avg_x = int(np.mean(data["x"]))
         avg_y = int(np.mean(data["y"]))
         avg_w = int(np.mean(data["w"]))
         avg_h = int(np.mean(data["h"]))
 
-        # Draw bounding box
         cv2.rectangle(frame, (avg_x, avg_y), (avg_x + avg_w, avg_y + avg_h), (0, 255, 0), 2)
-
-        # Display the last computed distance (updates every 10s)
         distance_value = distance_results.get(label, None)
-        if distance_value is not None:
-            distance_text = f"{label}: {distance_value:.2f} cm"
-        else:
-            distance_text = f"{label}: Calculating..."
+        distance_text = f"{label}: {distance_value:.2f} cm" if distance_value else f"{label}: Calculating..."
         cv2.putText(frame, distance_text, (avg_x, avg_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    cv2.imshow("YOLO Object Detection with Distance Measurement", frame)
+    for warning_message in alt:
+        print(warning_message)
+        engine.say(warning_message)
+        engine.runAndWait()
+
+    cv2.imshow("YOLO Object Detection with Distance Warning", frame)
 
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break

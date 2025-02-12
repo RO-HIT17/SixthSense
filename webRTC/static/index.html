@@ -16,27 +16,22 @@
         const canvas = document.getElementById("canvasElement");
         const context = canvas.getContext("2d");
 
-        // Open WebSocket connection to Flask
-        const socket = new WebSocket("ws://192.168.1.5:5000/video");  // Replace with Flask server IP
+        const socket = new WebSocket("ws://192.168.1.5:5000/video");  
 
-        // Request camera access
         navigator.mediaDevices.getUserMedia({ video: true })
             .then((stream) => {
                 video.srcObject = stream;
                 setInterval(() => {
-                    // Capture frame from video
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                    // Convert frame to base64
                     const frameData = canvas.toDataURL("image/jpeg");
                     socket.send(frameData);
-                }, 200); // Send frame every 200ms
+                }, 200); 
             })
             .catch((error) => console.error("Camera access error:", error));
 
-        // Receive audio from Flask and play it
         socket.onmessage = (event) => {
             const audioElement = document.getElementById("audioElement");
             audioElement.src = event.data;
