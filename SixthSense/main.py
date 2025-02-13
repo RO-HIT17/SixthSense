@@ -12,22 +12,20 @@ from opener import SmartAndroidAssistant
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
 from msrest.authentication import CognitiveServicesCredentials
+from dotenv import load_dotenv
+load_dotenv()
 
-GEMINI_API_KEY = "AIzaSyCvhzFIbdxejpApm0KK0YlOUg-fziT6qLg"  # Replace with your API key
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
-SPEECH_KEY = "3nF1650hHykjRygiBdmSgJQ8U08bOXEmgGXz8qIFlbya8Wa3UUDzJQQJ99BBACYeBjFXJ3w3AAAYACOGIx0Z"
-SPEECH_REGION = "eastus"
+SPEECH_KEY = os.getenv("SPEECH_KEY")
+SPEECH_REGION = os.getenv("SPEECH_REGION")
 
-AZURE_ENDPOINT = "https://horizon-test1711.cognitiveservices.azure.com/"
-AZURE_KEY = "6a2U9CnbPO2JqPY9Doi5LEVemTW0F5jI6nVnFg0Td1JGCvGCi2l0JQQJ99BBACYeBjFXJ3w3AAAFACOGC0BT"
+
+AZURE_ENDPOINT = os.getenv("AZURE_COMPUTERVISION_ENDPOINT")
+AZURE_KEY = os.getenv("AZURE_COMPUTERVISION_KEY")
 
 FLASK_API_URL = "http://127.0.0.1:5000/start-navigation"
-
-openai.api_type = "azure"
-openai.api_key = "2vYQo6xlAVhogi0UI8VeFGAQUylxg1ZUFQPBMlC3wCrLs9Suzf4SJQQJ99BBACfhMk5XJ3w3AAAAACOGjuFF"
-openai.api_base = "https://20231-m6xs5g85-swedencentral.openai.azure.com/"
-openai.api_version = "2023-06-01-preview"
 
 cv_client = ComputerVisionClient(AZURE_ENDPOINT, CognitiveServicesCredentials(AZURE_KEY))
 
@@ -65,6 +63,7 @@ def analyze_text(text):
     - "unread" → If the user wants to check unread messages on WhatsApp.
     - "insta" → If the user wants to upload Instagram Story.
     - "voice" → If the user wants to send a voice message on WhatsApp.
+
     **Instructions:**
     - Extract relevant details based on the intent.
     - If intent is unclear, return `"intent": "unknown"`.
@@ -160,6 +159,7 @@ def analyze_text(text):
     except json.JSONDecodeError:
         print("⚠️ Error parsing Gemini response!")
         return {"intent": "unknown"}
+
 def search_youtube(query):
     encoded_query = urllib.parse.quote(query)
     url = f"https://www.youtube.com/results?search_query={encoded_query}"
@@ -172,28 +172,23 @@ def search_google(query):
     subprocess.run(["adb", "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url])
     print(f"✅ Opened Google search for: {query}")
 
-import os
-import time
 def book_ticket_on_redbus(source,destination):
     assistant = SmartAndroidAssistant()
     app = "redbus"
     assistant.open_app(app)
-    time.sleep(7)  # Wait for the app to open
+    time.sleep(7)
 
     adb_command("input tap 259 370")  
     time.sleep(5)
 
     adb_command(f'input text "{source.replace(" ", "%s")}"')
-    time.sleep(2)
-
-    
+    time.sleep(2)    
     
     adb_command("input tap 298 438")
     time.sleep(2)
     
     adb_command("input tap 247 547")
     time.sleep(2)
-    
     
     adb_command(f'input text "{destination.replace(" ", "%s")}"')
     time.sleep(2)
@@ -212,7 +207,6 @@ def book_ticket_on_redbus(source,destination):
     
     adb_command("input tap 287 658")
     time.sleep(2)
-
 
 def play_spotify_song(song_name):
     def adb_command(cmd):
@@ -255,11 +249,12 @@ def describe_image(image_path):
             print("⚠️ No description found.")
     except Exception as e:
         print(f"⚠️ Error describing image: {e}")
+        
 def order_food_on_zomato(food_item):
     assistant = SmartAndroidAssistant()
     app = "zomato"
     assistant.open_app(app)
-    time.sleep(10)  # Wait for the app to open
+    time.sleep(10)  
 
     adb_command("input tap 159 228")  
     time.sleep(2)
@@ -302,6 +297,7 @@ def search_contact(contact_name):
 
     subprocess.run(["adb", "shell", "input", "tap", "300", "400"])  
     time.sleep(2)
+    
 def book_ride_on_rapido(destination):
     assistant = SmartAndroidAssistant()
     app = "rapido"
@@ -314,8 +310,6 @@ def book_ride_on_rapido(destination):
     adb_command(f'input text "{destination.replace(" ", "%s")}"')
     time.sleep(5)
 
-    
-    
     adb_command("input tap 152 501")
     time.sleep(4)
     adb_command("input tap 300 1125")
@@ -325,7 +319,6 @@ def book_ride_on_rapido(destination):
     time.sleep(3)
     adb_command(f"input swipe 666 1371 666 1371")
     time.sleep(3)
-
 
 def insta():
     assistant = SmartAndroidAssistant()
@@ -371,7 +364,7 @@ def tap_microphone_button(duration):
 
 def send_voice_message(contact_number,duration):
     print("📱 Opening WhatsApp...")
-    """Launch WhatsApp."""
+    
     subprocess.run(["adb", "shell", "am", "start", "-n", "com.whatsapp/.HomeActivity"])
     time.sleep(2)  
 
@@ -387,9 +380,9 @@ def send_message(message):
     formatted_msg = message.replace(" ", "%s")
     subprocess.run(["adb", "shell", "input", "text", formatted_msg])
     time.sleep(1)
-    subprocess.run(["adb", "shell", "input", "keyevent", "66"])  # Press Enter
+    subprocess.run(["adb", "shell", "input", "keyevent", "66"]) 
 
-# 🗺️ Start Navigation
+
 def start_navigation(source, destination):
     data = {"source": source, "destination": destination}
     response = requests.post(FLASK_API_URL, json=data)
@@ -398,8 +391,6 @@ def start_navigation(source, destination):
         print("✅ Navigation started successfully!")
     else:
         print(f"❌ Failed to start navigation: {response.json()}")
-import os
-import time
 
 def main():
     while True:

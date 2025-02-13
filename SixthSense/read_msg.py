@@ -3,28 +3,26 @@ import io
 import time
 import pyttsx3
 import cv2
-import subprocess  # For running ADB commands
+import subprocess
 from PIL import Image
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
 from msrest.authentication import CognitiveServicesCredentials
 import google.generativeai as genai
+from dotenv import load_dotenv
+load_dotenv()
 
-# 🔑 Azure Computer Vision Credentials
-AZURE_ENDPOINT = "https://horizon-test1711.cognitiveservices.azure.com/"
-AZURE_KEY = "6a2U9CnbPO2JqPY9Doi5LEVemTW0F5jI6nVnFg0Td1JGCvGCi2l0JQQJ99BBACYeBjFXJ3w3AAAFACOGC0BT"
 
-# 🔑 Gemini AI API Key
-GEMINI_API_KEY = "AIzaSyDPwijZg1zvbofMjpdVogd3yABXcwP7Otc"
+AZURE_ENDPOINT = os.getenv("AZURE_COMPUTERVISION_ENDPOINT")
+AZURE_KEY = os.getenv("AZURE_COMPUTERVISION_KEY")
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
-# 🎙️ Initialize Text-to-Speech Engine
 tts_engine = pyttsx3.init()
 
-# 📱 Capture Screenshot from Mobile (Android)
 screenshot_path = "mobile_screenshot.png"
 
-# 🟢 Ensure ADB is connected to your mobile device
 try:
     print("📸 Capturing screenshot from mobile...")
     subprocess.run(["adb", "shell", "screencap", "-p", "/sdcard/screenshot.png"])
@@ -34,17 +32,14 @@ except Exception as e:
     print(f"❌ Error capturing screenshot: {e}")
     exit()
 
-# 🔍 Read the saved image
 with open(screenshot_path, "rb") as image_file:
     image_data = image_file.read()
 
-image_stream = io.BytesIO(image_data)  # Convert bytes to a file-like object
+image_stream = io.BytesIO(image_data)  
 
-# 📊 Call Azure Computer Vision to describe the screen contents
 client = ComputerVisionClient(AZURE_ENDPOINT, CognitiveServicesCredentials(AZURE_KEY))
 description_results = client.describe_image_in_stream(image_stream)
 
-# 📝 Print the best caption
 if description_results.captions:
     for caption in description_results.captions:
         description_text = caption.text
@@ -53,7 +48,6 @@ else:
     description_text = "No description found."
     print("❌ No description found.")
 
-# ✨ Generate Expanded Description Using Gemini AI
 if description_text != "No description found.":
 
     prompt = f"""
@@ -72,7 +66,6 @@ if description_text != "No description found.":
 else:
     expanded_description = "No valid image description available for expansion."
 
-# 🎙️ Speak the Expanded Description
 if expanded_description.strip() and expanded_description != "No valid image description available for expansion.":
     print("\n🎙️ Speaking the expanded description...")
     tts_engine.say(expanded_description)

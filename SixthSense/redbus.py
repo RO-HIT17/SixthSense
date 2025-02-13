@@ -8,19 +8,15 @@ def book_ticket_on_redbus(source,destination):
     assistant = SmartAndroidAssistant()
     app = "redbus"
     assistant.open_app(app)
-    time.sleep(6)  # Wait for the app to open
+    time.sleep(6)  
 
-    # Tap on the search bar (Adjust coordinates as per your device)
     adb_command("input tap 259 370")  
     time.sleep(5)
 
-    # Type the food item
     adb_command(f'input text "{source.replace(" ", "%s")}"')
     time.sleep(2)
 
     
-    #adb_command("input keyevent 66")  
-    #time.sleep(3)
     
     adb_command("input tap 298 438")
     time.sleep(2)
@@ -47,12 +43,5 @@ def book_ticket_on_redbus(source,destination):
     adb_command("input tap 287 658")
     time.sleep(2)
     
-    # Tap on 'Proceed to Checkout' (Modify coordinates if needed)
-    #adb_command("input tap 306 1134")
-    #time.sleep(2)
-    #adb_command("input tap 285 1106")
-    #print(f"✅ Ordered {destination} on Zomato!")
-    #adb_command("input tap 285 1106")
-     
-# Call the function with the food item you want to order
+    
 book_ticket_on_redbus("Chennai","Madurai")

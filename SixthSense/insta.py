@@ -8,7 +8,7 @@ def insta():
     assistant = SmartAndroidAssistant()
     app = "instagram"
     assistant.open_app(app)
-    time.sleep(5)  # Wait for the app to open
+    time.sleep(5)  
 
     adb_command(f"input tap 128 274")
     time.sleep(3)

@@ -6,18 +6,16 @@ import googlemaps
 from gtts import gTTS
 import os
 from playsound import playsound
+from dotenv import load_dotenv
 app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# 🔹 Replace with your Google API Key
-GOOGLE_MAPS_API_KEY = "AIzaSyDrsZPrN-5yZhz0v1yE73gg_vphwuXRZsM"
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 gmaps = googlemaps.Client(key=GOOGLE_MAPS_API_KEY)
 
-# 🔹 Store user locations
 user_locations = {}
 
-# 📌 Route 1: Get Navigation Instructions
 import re
 
 def strip_html_tags(text):
@@ -34,11 +32,9 @@ def start_navigation():
         return jsonify({"error": "Source and Destination are required"}), 400
 
     try:
-        # ✅ Convert place names to coordinates
         source_coords = gmaps.geocode(source)[0]['geometry']['location']
         dest_coords = gmaps.geocode(destination)[0]['geometry']['location']
 
-        # ✅ Get Directions
         directions = gmaps.directions(source, destination, mode="driving")
 
         if not directions:
@@ -49,12 +45,11 @@ def start_navigation():
             {
                 "distance": step['distance']['text'],
                 "duration": step['duration']['text'],
-                "instruction": strip_html_tags(step['html_instructions'])  # 🛑 Remove HTML tags
+                "instruction": strip_html_tags(step['html_instructions'])  
             }
             for step in steps
         ]
 
-        # ✅ Convert first instruction to speech
         text_to_speech(instructions[0]["instruction"])
 
         return jsonify({
@@ -79,7 +74,6 @@ def location_update():
 
     user_locations[user_id] = {"latitude": latitude, "longitude": longitude}
 
-    # 🔹 Send update to frontend
     socketio.emit('location_update', {
         "user_id": user_id,
         "latitude": latitude,
@@ -89,7 +83,6 @@ def location_update():
     return jsonify({"message": "Location updated"})
 
 
-# 📌 Convert Text to Speech
 def text_to_speech(text):
     try:
         tts = gTTS(text=text, lang='en')
@@ -101,6 +94,5 @@ def text_to_speech(text):
         return None
 
 
-# 📌 Run Flask App
 if __name__ == '__main__':
     socketio.run(app, host="0.0.0.0", port=5000, debug=True)

@@ -6,28 +6,27 @@ import pyttsx3
 import time
 import os
 import re
-# ✅ Configure Gemini API (Use environment variable for security)
-API_KEY = "AIzaSyDPwijZg1zvbofMjpdVogd3yABXcwP7Otc"  # Set this in your environment variable
+from dotenv import load_dotenv
+load_dotenv()
+
+API_KEY = os.getenv("GEMINI_API_KEY")  
 if not API_KEY:
     raise ValueError("❌ API Key not found! Set GEMINI_API_KEY in your environment variables.")
 
 genai.configure(api_key=API_KEY)
 
-# ✅ Capture Screenshot Using ADB
 def capture_screenshot():
     subprocess.run(["adb", "shell", "screencap", "-p", "/sdcard/whatsapp_screen.png"])
     subprocess.run(["adb", "pull", "/sdcard/whatsapp_screen.png", "."])
     print("📸 Screenshot captured!")
 
-# ✅ Convert Image to Base64 for Gemini
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
 
-# ✅ Send Screenshot to Gemini Vision AI
 def analyze_screenshot():
     image_base64 = encode_image("whatsapp_screen.png")
-    model = genai.GenerativeModel('gemini-2.0-flash')  # Use the latest stable vision model
+    model = genai.GenerativeModel('gemini-2.0-flash')  
 
     response = model.generate_content([
         {"text": (
@@ -46,18 +45,16 @@ def analyze_screenshot():
     
 def extract_json(response_text):
     try:
-        # ✅ Extract JSON using regex (handles extra text issues)
         match = re.search(r'\[.*?\]', response_text, re.DOTALL)
         if match:
             json_text = match.group(0)
-            return json.loads(json_text)  # ✅ Convert to Python List
+            return json.loads(json_text)  
         else:
             print("⚠️ No valid JSON found in the response.")
             return []
     except json.JSONDecodeError:
         print("❌ Error: Invalid JSON format received.")
         return []
-# ✅ Text-to-Speech (TTS) Announcement
 def speak_unread_messages(unread_messages):
     engine = pyttsx3.init()
 
@@ -74,7 +71,6 @@ def speak_unread_messages(unread_messages):
         engine.say("No unread messages.")
         engine.runAndWait()
 
-# ✅ Print & Speak the Unread Messages
     if unread_messages:
         print("📥 Unread Messages Found:")
         for msg in unread_messages:
@@ -82,9 +78,6 @@ def speak_unread_messages(unread_messages):
 
     speak_unread_messages(unread_messages)
 
-# ✅ Extract Unread Messages from Gemini Response
-
-# ✅ Text-to-Speech (TTS) Announcement
 def speak_unread_messages(unread_messages):
     engine = pyttsx3.init()
 
@@ -99,10 +92,9 @@ def speak_unread_messages(unread_messages):
         engine.say("No unread messages.")
         engine.runAndWait()
 
-# 🚀 Main Execution Flow
 if __name__ == "__main__":
     capture_screenshot()
-    time.sleep(2)  # Allow time for image capture
+    time.sleep(2)  
 
     unread_messages = analyze_screenshot()
     
