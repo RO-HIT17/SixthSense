@@ -2,15 +2,15 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import azure.cognitiveservices.speech as speechsdk
-
+from dotenv import load_dotenv
 app = Flask(__name__)
 CORS(app)
 
-AZURE_SPEECH_KEY = "3nF1650hHykjRygiBdmSgJQ8U08bOXEmgGXz8qIFlbya8Wa3UUDzJQQJ99BBACYeBjFXJ3w3AAAYACOGIx0Z"
-AZURE_SPEECH_REGION = "eastus"
+AZURE_SPEECH_KEY = os.getenv("AZURE_SPEECH_KEY")
+AZURE_SPEECH_REGION = os.getenv("AZURE_SPEECH_REGION")
 
 def convert_speech_to_text(audio_path):
-    speech_config = speechsdk.SpeechConfig(subscription=AZURE_SPEECH_KEY, region=AZURE_REGION)
+    speech_config = speechsdk.SpeechConfig(subscription=AZURE_SPEECH_KEY, region=AZURE_SPEECH_REGION)
     audio_config = speechsdk.audio.AudioConfig(filename=audio_path)
 
     recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)

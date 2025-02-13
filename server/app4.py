@@ -9,7 +9,6 @@ app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Load YOLO
 net = cv2.dnn.readNet("C:\Rohit\Projects\SixthSense\model\yolov3.weights", "C:\Rohit\Projects\SixthSense\model\yolov3.cfg")
 with open("C:\Rohit\Projects\SixthSense\model\coco.names", "r") as f:
     classes = [line.strip() for line in f.readlines()]
@@ -18,27 +17,21 @@ output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
 
 def decode_image(image_data):
     try:
-        # Debug print to check incoming data
         print(f"Received image data length: {len(image_data)}")
         
-        # Remove any whitespace and newlines
         image_data = image_data.strip()
         
-        # Remove the data URL prefix if present
         if 'data:image/jpeg;base64,' in image_data:
             image_data = image_data.split('data:image/jpeg;base64,')[1]
             print("Removed data URL prefix")
         
-        # Remove any additional whitespace after splitting
         image_data = image_data.strip()
         
-        # Add padding if needed
         missing_padding = len(image_data) % 4
         if missing_padding:
             image_data += '=' * (4 - missing_padding)
             print(f"Added {4 - missing_padding} padding characters")
         
-        # Decode base64 string to bytes
         try:
             image_bytes = base64.b64decode(image_data)
             print(f"Successfully decoded base64, bytes length: {len(image_bytes)}")
@@ -46,7 +39,6 @@ def decode_image(image_data):
             print(f"Base64 decoding failed: {str(e)}")
             raise
         
-        # Convert bytes to numpy array
         try:
             nparr = np.frombuffer(image_bytes, np.uint8)
             print(f"Converted to numpy array, shape: {nparr.shape}")
@@ -54,7 +46,6 @@ def decode_image(image_data):
             print(f"Numpy conversion failed: {str(e)}")
             raise
         
-        # Decode image
         try:
             image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if image is not None:
@@ -96,7 +87,6 @@ def detect_objects(image):
 @socketio.on('send_frame')
 def handle_frame(data):
     try:
-        # Check if we received data
         if not data:
             print("No data received")
             return socketio.emit('detection_response', {
@@ -104,7 +94,6 @@ def handle_frame(data):
                 'error': 'No data received'
             })
         
-        # Get image data
         image_data = data.get('image')
         if not image_data:
             print("No image data in payload")
@@ -113,7 +102,6 @@ def handle_frame(data):
                 'error': 'No image data in payload'
             })
         
-        # Decode the image
         print("Attempting to decode image...")
         image = decode_image(image_data)
         if image is None:
@@ -122,11 +110,9 @@ def handle_frame(data):
                 'error': 'Failed to decode image'
             })
         
-        # Detect objects
         print("Detecting objects...")
         objects, confidences = detect_objects(image)
         
-        # Send response back to client
         print(f"Detection successful. Found {len(objects)} objects")
         socketio.emit('detection_response', {
             'success': True,

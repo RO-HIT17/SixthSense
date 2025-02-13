@@ -27,7 +27,6 @@
                 let audioUrl = URL.createObjectURL(audioBlob);
                 document.getElementById("audioPlayback").src = audioUrl;
 
-                // Send the audio file to the Flask backend
                 let formData = new FormData();
                 formData.append("file", audioBlob, "recording.webm");
 

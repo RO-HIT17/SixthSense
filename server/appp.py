@@ -14,7 +14,6 @@ app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# Create an "uploads" directory to store received images
 os.makedirs("uploads", exist_ok=True)
 
 @app.route('/upload', methods=['POST'])
@@ -56,27 +55,22 @@ def process_image(base64_image):
         raise ValueError("No image data received")
 
     try:
-        # Clean up the base64 string
         base64_string = base64_image.replace('data:image/jpeg;base64,', '')
         base64_string = base64_string.replace('data:image/png;base64,', '')
-        base64_string = base64_string.replace(' ', '+')  # Fix potential space issues
+        base64_string = base64_string.replace(' ', '+')  
         
-        # Remove any non-base64 characters
         base64_string = ''.join(c for c in base64_string if c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=')
         
         logger.info(f"Base64 string length: {len(base64_string)}")
         
-        # Add padding if necessary
         missing_padding = len(base64_string) % 4
         if missing_padding:
             base64_string += '=' * (4 - missing_padding)
 
         try:
-            # First attempt: direct decode
             image_bytes = base64.b64decode(base64_string)
         except Exception as e:
             logger.warning(f"First decode attempt failed: {e}")
-            # Second attempt: with strict validation off
             image_bytes = base64.b64decode(base64_string + '==', validate=False)
 
         image_np = np.frombuffer(image_bytes, dtype=np.uint8)
@@ -85,10 +79,8 @@ def process_image(base64_image):
         if img is None:
             raise ValueError("Failed to decode image after successful base64 decode")
 
-        # Show the image dimensions for debugging
         logger.info(f"Decoded image shape: {img.shape}")
 
-        # Save and display image
         image_path = os.path.join("uploads", f"frame_{int(time.time())}.jpg")
         cv2.imwrite(image_path, img)
         cv2.imshow("Received Frame", img)
@@ -102,7 +94,7 @@ def process_image(base64_image):
 
     except Exception as e:
         logger.error(f"Error processing image: {str(e)}")
-        logger.error(f"Base64 string prefix: {base64_image[:50]}...")  # Show start of string for debugging
+        logger.error(f"Base64 string prefix: {base64_image[:50]}...")  
         return {"success": False, "error": str(e)}
 
 if __name__ == '__main__':

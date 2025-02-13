@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import logging
 import time
-import pyttsx3  # For text-to-speech conversion
+import pyttsx3  
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,10 +16,8 @@ app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# Create an "uploads" directory to store received images
 os.makedirs("uploads", exist_ok=True)
 
-# Load YOLOv3 model
 yolo_net = cv2.dnn.readNet("C:\Rohit\Projects\SixthSense\model\yolov3.weights", "C:\Rohit\Projects\SixthSense\model\yolov3.cfg")
 with open("C:\Rohit\Projects\SixthSense\model\coco.names", "r") as f:
     class_names = [line.strip() for line in f.readlines()]
@@ -27,7 +25,6 @@ with open("C:\Rohit\Projects\SixthSense\model\coco.names", "r") as f:
 layer_names = yolo_net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
 
-# Initialize text-to-speech engine
 tts_engine = pyttsx3.init()
 
 @app.route('/upload', methods=['POST'])
@@ -79,10 +76,9 @@ def process_image(base64_image):
         raise ValueError("No image data received")
 
     try:
-        # Decode base64 image
         base64_string = base64_image.replace('data:image/jpeg;base64,', '')
         base64_string = base64_string.replace('data:image/png;base64,', '')
-        base64_string = base64_string.replace(' ', '+')  # Fix potential space issues
+        base64_string = base64_string.replace(' ', '+')  
         
         base64_string = ''.join(c for c in base64_string if c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=')
         missing_padding = len(base64_string) % 4
@@ -96,21 +92,18 @@ def process_image(base64_image):
         if img is None:
             raise ValueError("Failed to decode image")
 
-        # Save and display image
         image_path = os.path.join("uploads", f"frame_{int(time.time())}.jpg")
         cv2.imwrite(image_path, img)
 
-        # Perform object detection
         detected_objects = detect_objects(img)
 
-        # Generate speech
         audio_path = generate_audio(detected_objects)
 
         return {
             "success": True,
             "message": "Image processed successfully!",
             "objects": detected_objects,
-            "audio_url": audio_path  # This will now be a URL path
+            "audio_url": audio_path  
         }
 
     except Exception as e:
@@ -163,7 +156,6 @@ def generate_audio(detected_objects):
     tts_engine.save_to_file(text_response, audio_file)
     tts_engine.runAndWait()
 
-    # Return the URL path with /uploads/
     return f"/uploads/{audio_filename}"
 
 if __name__ == '__main__':

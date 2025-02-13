@@ -6,9 +6,9 @@ import base64
 import time
 
 app = Flask(__name__)
-CORS(app)  # Allow requests from React Native app
+CORS(app)  
 
-# Load YOLO Model
+
 net = cv2.dnn.readNet("C:\Rohit\Projects\SixthSense\model\yolov3.weights", "C:\Rohit\Projects\SixthSense\model\yolov3.cfg")
 layer_names = net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
@@ -22,13 +22,11 @@ def detect_objects():
     if not image_data:
         return jsonify({"error": "No image received"})
 
-    # Convert base64 to Image
     try:
         decoded = base64.b64decode(image_data)
         np_arr = np.frombuffer(decoded, np.uint8)
         img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-        # Resize image for YOLO
         height, width, channels = img.shape
         blob = cv2.dnn.blobFromImage(img, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
         net.setInput(blob)

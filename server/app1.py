@@ -9,13 +9,11 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Load YOLO model
 yolo_net = cv2.dnn.readNet("C:\Rohit\Projects\SixthSense\model\yolov3.weights", "C:\Rohit\Projects\SixthSense\model\yolov3.cfg")
 layer_names = yolo_net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
 class_labels = open("C:\Rohit\Projects\SixthSense\model\coco.names").read().strip().split("\n")
 
-# Function to process image using YOLO
 def process_image(image):
     img_data = base64.b64decode(image)
     np_arr = np.frombuffer(img_data, np.uint8)
@@ -37,7 +35,6 @@ def process_image(image):
 
     return detected_objects
 
-# API to receive image from mobile app
 @app.route('/detect', methods=['POST'])
 def detect_objects():
     data = request.get_json()
@@ -55,7 +52,6 @@ def detect_objects():
 
     return jsonify({"objects": detected_objects, "alert": alert_text})
 
-# API to serve the generated alert audio file
 @app.route('/alert.mp3', methods=['GET'])
 def get_audio():
     return send_file("alert.mp3", mimetype="audio/mpeg")
