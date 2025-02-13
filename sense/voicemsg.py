@@ -40,5 +40,5 @@ def send_voice_message(contact_number):
 
 # Run the script
 if __name__ == "__main__":
-    contact_name = "Shraieff Suhaib"  
+    contact_name = "Vijay Krishna"  
     send_voice_message(contact_name)

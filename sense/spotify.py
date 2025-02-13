@@ -2,7 +2,7 @@ import os
 import time
 
 # Define song name (Modify this)
-SONG_NAME = "Levitating"  # Change to your desired song
+SONG_NAME = "Tum Sath Ho"  # Change to your desired song
 
 # Coordinates for Spotify search bar (Update these after finding them using getevent or screencap method)
 SEARCH_X, SEARCH_Y = 500, 600  # Update these coordinates
