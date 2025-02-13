@@ -27,7 +27,7 @@ Sixth Sense is an AI-powered **real-time assistant** designed to aid visually im
 ## Voice Command Actions
 - **Navigation & Object Detection**:
   - Get directions (source & destination).
-  - Detect obstacles in a path.
+  - Detect obstacles in a path with relative distance.
   - Describe images or surroundings.
 - **Text & Speech Processing**:
   - Extract text from an image.
