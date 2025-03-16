@@ -3,6 +3,12 @@
 ## Overview
 Sixth Sense is an AI-powered **real-time assistant** designed to aid visually impaired individuals in **navigation, object detection, and automation of daily tasks**. Utilizing **computer vision, voice recognition, and conversational AI**, this system provides real-time feedback on the surrounding environment through **audio alerts** and enables seamless **voice-command-based interactions**.
 
+---
+
+> **Built by Team Code Crusaders for Nexathon'25**  
+
+---
+
 ## Key Features
 - **Real-Time Object & Obstacle Detection**: Identifies objects and obstacles in the user's path and provides audio alerts with relative distance.
 - **Indoor & Outdoor Navigation**: Provides voice-guided navigation from one location to another.
